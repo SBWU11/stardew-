@@ -1,8 +1,10 @@
 // Co-op room sync. Stores one JSON document per room code.
 //
 // Storage backend:
-//   - If UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set (e.g. an
-//     Upstash Redis from the Vercel Marketplace), state is shared across devices.
+//   - If an Upstash Redis REST endpoint is configured, state is shared across
+//     devices. We accept either the Vercel Marketplace var names
+//     (KV_REST_API_URL / KV_REST_API_TOKEN) or the classic Upstash names
+//     (UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN) — same REST API.
 //   - Otherwise it falls back to an in-memory map, which works for a single
 //     `next dev` process (great for trying it locally in two browser tabs) but
 //     resets on restart and is NOT shared across serverless instances.
@@ -11,8 +13,8 @@ export const dynamic = "force-dynamic";
 
 type StoredState = { rev?: number; [k: string]: unknown };
 
-const REST_URL = process.env.UPSTASH_REDIS_REST_URL;
-const REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const REST_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const REST_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const usingRedis = Boolean(REST_URL && REST_TOKEN);
 
 // In-memory fallback (per server process).
