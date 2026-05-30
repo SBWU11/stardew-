@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   buildings,
   bundleGroups,
@@ -10,15 +10,20 @@ import {
   clampDay,
   crops,
   isAvailableInSeason,
+  missionTemplates,
   roomAccent,
   roomOrder,
   seasonFocus,
   seasons,
+  toolUpgrades,
+  tools,
   universalGifts,
+  villagerRoutines,
   villagers,
   type BundleGroup,
   type BundleItem,
   type Building,
+  type MissionTemplate,
   type Season,
   type Villager,
 } from "./data";
@@ -61,6 +66,10 @@ const seasonEmoji: Record<Season, string> = {
   Fall: "🍂",
   Winter: "❄️",
 };
+
+// Stardew weeks start on Monday: day 1 = Monday … day 7 = Sunday, repeating.
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const weekdayFor = (day: number) => WEEKDAYS[(day - 1) % 7];
 
 export default function Home() {
   const { state, mutate, hydrated, roomCode, status, joinRoom, leaveRoom } = useFarm();
@@ -697,6 +706,8 @@ function BundlesView({
   const [query, setQuery] = useState("");
   // Default to the current season so you only see what you can work on right now.
   const [seasonOnly, setSeasonOnly] = useState(true);
+  // "Must-get": seasonal items you can ONLY get now — no "Any" fallback, so don't miss them.
+  const [mustGet, setMustGet] = useState(false);
   const [hideDone, setHideDone] = useState(false);
 
   const q = query.trim().toLowerCase();
@@ -709,13 +720,14 @@ function BundlesView({
           const text = `${i.name} ${i.bundle} ${i.source}`.toLowerCase();
           if (q && !text.includes(q)) return false;
           if (seasonOnly && !isAvailableInSeason(i, state.season)) return false;
+          if (mustGet && (i.seasons.includes("Any") || !isAvailableInSeason(i, state.season))) return false;
           if (hideDone && p.turnedIn) return false;
           return true;
         });
         return { ...g, items };
       })
       .filter((g) => g.items.length > 0);
-  }, [q, seasonOnly, hideDone, state]);
+  }, [q, seasonOnly, mustGet, hideDone, state]);
 
   const byRoom = roomOrder
     .map((room) => ({ room, groups: visibleGroups.filter((g) => g.room === room) }))
@@ -735,6 +747,10 @@ function BundlesView({
         <label className="chk">
           <input type="checkbox" checked={seasonOnly} onChange={(e) => setSeasonOnly(e.target.checked)} />
           Available in {state.season}
+        </label>
+        <label className="chk must">
+          <input type="checkbox" checked={mustGet} onChange={(e) => setMustGet(e.target.checked)} />
+          Must-get in {state.season}
         </label>
         <label className="chk">
           <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} />
@@ -956,6 +972,12 @@ function CalendarView({
 
   return (
     <div className="calendar">
+      <div className="cal-head">
+        <strong>
+          {seasonEmoji[view]} {view} · Year {state.year}
+        </strong>
+        <span className="cal-note">Birthdays & festivals repeat every year (e.g. the Desert Festival, Spring 15–17).</span>
+      </div>
       <div className="cal-switch">
         {seasons.map((s) => (
           <button key={s} type="button" className={s === view ? "active" : ""} onClick={() => setView(s)}>
@@ -1144,15 +1166,35 @@ type TrackActions = {
 
 const TRACK_GROUPS: TrackOwner[] = ["p1", "both", "p2"];
 
-// Seed a romance track from a villager's gifts + the heart milestones.
+// Seed a romance track from the gift cadence + heart milestones.
 function romanceItems(v: Villager): TrackItem[] {
   return [
-    `Reach 8 ❤ — then give a Bouquet to start dating`,
-    `Reach 10 ❤ — then give the Mermaid's Pendant to propose`,
-    `Keep gifting loves: ${v.loved}`,
-    `Give a loved gift on their birthday (${v.season} ${v.day}) — counts 8×`,
+    `This week: give 2 gifts (a loved gift = +80 friendship; resets Monday)`,
+    `Birthday ${v.season} ${v.day} — give a loved gift (counts 8×)`,
+    `Reach 8 ❤ → buy & give a Bouquet to start dating`,
+    `Reach 10 ❤ → give the Mermaid's Pendant to propose`,
     `Watch their heart events as they unlock`,
   ].map((label) => ({ id: newId("itm"), label, done: false }));
+}
+
+// Loves + likes shown as reference context above a romance checklist.
+function romanceNote(v: Villager): string {
+  const likes = v.liked ?? "flowers, fruit, most cooked dishes, gems & artisan goods";
+  return `❤ Loves: ${v.loved}\n♡ Likes: ${likes}`;
+}
+
+// Seed a tool track with the Clint upgrade ladder.
+function toolItems(): TrackItem[] {
+  return toolUpgrades.map((u) => ({
+    id: newId("itm"),
+    label: `Upgrade to ${u.tier} — ${u.gold.toLocaleString()}g + ${u.bar} at Clint's (2 days)`,
+    done: false,
+  }));
+}
+
+// Seed a goal track from a mission template.
+function missionItems(m: MissionTemplate): TrackItem[] {
+  return m.items.map((label) => ({ id: newId("itm"), label, done: false }));
 }
 
 // Seed a build track from the Carpenter materials + gold.
@@ -1166,21 +1208,26 @@ function buildItems(b: Building): TrackItem[] {
   return labels.map((label) => ({ id: newId("itm"), label, done: false }));
 }
 
+function ownerAvatar(o: TrackOwner, label: string) {
+  if (o === "both") {
+    return (
+      <span className="avatar both" aria-hidden="true">
+        👥
+      </span>
+    );
+  }
+  const initial = label.trim().charAt(0).toUpperCase() || (o === "p1" ? "1" : "2");
+  return (
+    <span className={`avatar ${o}`} aria-hidden="true">
+      {initial}
+    </span>
+  );
+}
+
 function BoardView({ state, actions }: { state: FarmState; actions: TrackActions }) {
   const tracks = state.tracks;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [openGroups, setOpenGroups] = useState<Record<TrackOwner, boolean>>({
-    p1: true,
-    both: true,
-    p2: true,
-  });
-
-  // Jump to the newest goal whenever one is added.
-  const prevLen = useRef(tracks.length);
-  useEffect(() => {
-    if (tracks.length > prevLen.current) setSelectedId(tracks[tracks.length - 1].id);
-    prevLen.current = tracks.length;
-  }, [tracks]);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleCollapse = (id: string) => setCollapsed((c) => ({ ...c, [id]: !c[id] }));
 
   const ownerLabel = (o: TrackOwner) =>
     o === "p1"
@@ -1189,85 +1236,68 @@ function BoardView({ state, actions }: { state: FarmState; actions: TrackActions
         ? state.players[1] || "Player 2"
         : "Shared";
 
-  const selected = tracks.find((t) => t.id === selectedId) ?? tracks[0] ?? null;
-  const toggleGroup = (o: TrackOwner) => setOpenGroups((g) => ({ ...g, [o]: !g[o] }));
-
   return (
     <div className="board">
       <TrackComposer state={state} addTrack={actions.addTrack} />
+      <GiftCheatSheet />
 
-      {tracks.length === 0 ? (
-        <div className="board-empty">
-          <strong>🎯 Your goal board is empty</strong>
+      <div className="board-columns">
+        {TRACK_GROUPS.map((o) => {
+          const list = tracks.filter((t) => t.owner === o);
+          return (
+            <section key={o} className={`board-col owner-${o}`}>
+              <header className="col-head">
+                {ownerAvatar(o, ownerLabel(o))}
+                <span className="col-name">{ownerLabel(o)}</span>
+                <span className="col-count">{list.length}</span>
+              </header>
+              <div className="col-body">
+                {list.length === 0 ? (
+                  <p className="col-empty">No goals yet — add one above.</p>
+                ) : (
+                  list.map((t) => (
+                    <TrackCard
+                      key={t.id}
+                      track={t}
+                      ownerLabel={ownerLabel}
+                      actions={actions}
+                      season={state.season}
+                      day={state.day}
+                      collapsed={!!collapsed[t.id]}
+                      onToggle={() => toggleCollapse(t.id)}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GiftCheatSheet() {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="cheat">
+      <button type="button" className="cheat-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="track-caret" aria-hidden="true">
+          {open ? "▾" : "▸"}
+        </span>
+        🌟 Gift cheat sheet — universal gifts that work on almost everyone
+      </button>
+      {open && (
+        <div className="cheat-body">
           <p>
-            Add a track above — romance a villager, plan a build, or anything you&apos;re working toward. Pick who
-            it&apos;s for (you, your co-op partner, or both), then tick tasks off together. Everything syncs to your
-            room.
+            <span className="ug loved">Loved</span> {universalGifts.loved}
           </p>
-        </div>
-      ) : (
-        <div className="board-split">
-          <aside className="board-nav">
-            {TRACK_GROUPS.map((o) => {
-              const list = tracks.filter((t) => t.owner === o);
-              const open = openGroups[o];
-              return (
-                <div key={o} className={`nav-group owner-${o}`}>
-                  <button
-                    type="button"
-                    className="nav-group-head"
-                    onClick={() => toggleGroup(o)}
-                    aria-expanded={open}
-                  >
-                    <span className="nav-caret" aria-hidden="true">
-                      {open ? "▾" : "▸"}
-                    </span>
-                    <span className="nav-dot" aria-hidden="true" />
-                    <span className="nav-group-name">{ownerLabel(o)}</span>
-                    <span className="nav-group-count">{list.length}</span>
-                  </button>
-                  {open &&
-                    (list.length === 0 ? (
-                      <p className="nav-empty">No goals yet</p>
-                    ) : (
-                      <ul className="nav-list">
-                        {list.map((t) => {
-                          const done = t.items.filter((i) => i.done).length;
-                          const total = t.items.length;
-                          const pct = total ? Math.round((done / total) * 100) : 0;
-                          return (
-                            <li key={t.id}>
-                              <button
-                                type="button"
-                                className={`nav-item${selected?.id === t.id ? " active" : ""}`}
-                                onClick={() => setSelectedId(t.id)}
-                              >
-                                <span className="nav-item-icon" aria-hidden="true">
-                                  {t.icon}
-                                </span>
-                                <span className="nav-item-title">{t.title}</span>
-                                <span className="nav-item-count">{total ? `${done}/${total}` : "—"}</span>
-                                <span className="nav-item-bar">
-                                  <span style={{ width: `${pct}%` }} />
-                                </span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ))}
-                </div>
-              );
-            })}
-          </aside>
-
-          <section className="board-detail">
-            {selected ? (
-              <TrackCard track={selected} ownerLabel={ownerLabel} actions={actions} />
-            ) : (
-              <p className="empty">Pick a goal from the list to see its tasks.</p>
-            )}
-          </section>
+          <p>
+            <span className="ug liked">Liked</span> {universalGifts.liked}
+          </p>
+          <p>
+            <span className="ug hated">Avoid</span> {universalGifts.hated}
+          </p>
         </div>
       )}
     </div>
@@ -1281,9 +1311,11 @@ function TrackComposer({
   state: FarmState;
   addTrack: TrackActions["addTrack"];
 }) {
-  const [kind, setKind] = useState<"romance" | "build" | "custom">("romance");
+  const [kind, setKind] = useState<"romance" | "build" | "tool" | "mission" | "custom">("romance");
   const [villager, setVillager] = useState(villagers[0].name);
   const [building, setBuilding] = useState(buildings[0].name);
+  const [tool, setTool] = useState(tools[0].name);
+  const [mission, setMission] = useState(missionTemplates[0].name);
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState<TrackOwner>("p1");
 
@@ -1291,15 +1323,23 @@ function TrackComposer({
     if (kind === "romance") {
       const v = villagers.find((x) => x.name === villager);
       if (!v) return;
-      addTrack({ title: `Romance ${v.name}`, icon: "💕", owner, items: romanceItems(v) });
+      addTrack({ title: `Romance ${v.name}`, icon: "💕", owner, note: romanceNote(v), items: romanceItems(v) });
     } else if (kind === "build") {
       const b = buildings.find((x) => x.name === building);
       if (!b) return;
-      addTrack({ title: b.name, icon: "🔨", owner, items: buildItems(b) });
+      addTrack({ title: b.name, icon: "🔨", owner, note: b.note, items: buildItems(b) });
+    } else if (kind === "tool") {
+      const t = tools.find((x) => x.name === tool);
+      if (!t) return;
+      addTrack({ title: `Upgrade ${t.name}`, icon: "🛠️", owner, note: t.note, items: toolItems() });
+    } else if (kind === "mission") {
+      const m = missionTemplates.find((x) => x.name === mission);
+      if (!m) return;
+      addTrack({ title: m.name, icon: m.icon, owner, items: missionItems(m) });
     } else {
       const clean = title.trim();
       if (!clean) return;
-      addTrack({ title: clean, icon: "🎯", owner, items: [] });
+      addTrack({ title: clean, icon: "✏️", owner, items: [] });
       setTitle("");
     }
   };
@@ -1307,7 +1347,9 @@ function TrackComposer({
   const kinds: [typeof kind, string][] = [
     ["romance", "💕 Romance"],
     ["build", "🔨 Build"],
-    ["custom", "🎯 Custom"],
+    ["tool", "🛠️ Tool"],
+    ["mission", "🎯 Goal"],
+    ["custom", "✏️ Custom"],
   ];
   const owners: [TrackOwner, string][] = [
     ["p1", state.players[0] || "P1"],
@@ -1339,6 +1381,24 @@ function TrackComposer({
             {buildings.map((b) => (
               <option key={b.name} value={b.name}>
                 {b.name} · {b.gold.toLocaleString()}g
+              </option>
+            ))}
+          </select>
+        )}
+        {kind === "tool" && (
+          <select value={tool} onChange={(e) => setTool(e.target.value)} aria-label="Tool to upgrade">
+            {tools.map((t) => (
+              <option key={t.name} value={t.name}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {kind === "mission" && (
+          <select value={mission} onChange={(e) => setMission(e.target.value)} aria-label="Goal to track">
+            {missionTemplates.map((m) => (
+              <option key={m.name} value={m.name}>
+                {m.icon} {m.name}
               </option>
             ))}
           </select>
@@ -1377,16 +1437,30 @@ function TrackCard({
   track,
   ownerLabel,
   actions,
+  season,
+  day,
+  collapsed,
+  onToggle,
 }: {
   track: Track;
   ownerLabel: (o: TrackOwner) => string;
   actions: TrackActions;
+  season: Season;
+  day: number;
+  collapsed: boolean;
+  onToggle: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const done = track.items.filter((i) => i.done).length;
   const total = track.items.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const complete = total > 0 && done === total;
+
+  // Romance goals show where to find the villager on the day you're on.
+  const romanceName = track.title.startsWith("Romance ") ? track.title.slice("Romance ".length) : null;
+  const routine = romanceName ? villagerRoutines[romanceName] : undefined;
+  const romanceVillager = romanceName ? villagers.find((v) => v.name === romanceName) : undefined;
+  const isBirthday = romanceVillager?.season === season && romanceVillager?.day === day;
 
   const addItem = () => {
     actions.addTrackItem(track.id, draft);
@@ -1396,76 +1470,91 @@ function TrackCard({
   return (
     <article className={`track owner-${track.owner}${complete ? " complete" : ""}`}>
       <header className="track-head">
-        <span className="track-icon" aria-hidden="true">
-          {track.icon}
-        </span>
-        <span className="track-title">{track.title}</span>
-        <span className={`track-owner ${track.owner}`}>{ownerLabel(track.owner)}</span>
+        <button type="button" className="track-toggle" onClick={onToggle} aria-expanded={!collapsed}>
+          <span className="track-caret" aria-hidden="true">
+            {collapsed ? "▸" : "▾"}
+          </span>
+          <span className="track-icon" aria-hidden="true">
+            {track.icon}
+          </span>
+          <span className="track-title">{track.title}</span>
+        </button>
+        <span className={`track-count${complete ? " done" : ""}`}>{total ? `${done}/${total}` : "—"}</span>
       </header>
 
       <div className="track-bar">
         <div className="track-fill" style={{ width: `${pct}%` }} />
       </div>
-      <div className="track-meta">
-        <span>{total ? `${done}/${total} done` : "No tasks yet"}</span>
-        {complete && <span className="track-done-tag">✓ complete</span>}
-      </div>
 
-      <div className="track-body">
-        {track.items.length > 0 && (
-          <ul className="track-items">
-            {track.items.map((i) => (
-              <li key={i.id} className={i.done ? "track-item done" : "track-item"}>
-                <label>
-                  <input type="checkbox" checked={i.done} onChange={() => actions.toggleTrackItem(track.id, i.id)} />
-                  <span className="track-box" aria-hidden="true" />
-                  <span className="track-item-label">{i.label}</span>
-                </label>
-                <button
-                  type="button"
-                  className="track-remove"
-                  onClick={() => actions.removeTrackItem(track.id, i.id)}
-                  aria-label="Remove task"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+      {!collapsed && (
+        <>
+          {track.note && <p className="track-note">{track.note}</p>}
+          {romanceName && (
+            <div className="track-routine">
+              <span className="rt-day">
+                📅 {weekdayFor(day)}, {season} {day}
+                {isBirthday ? " · 🎂 their birthday today!" : ""}
+              </span>
+              {routine && <span className="rt-where">📍 {routine}</span>}
+            </div>
+          )}
+          <div className="track-body">
+            {track.items.length > 0 && (
+              <ul className="track-items">
+                {track.items.map((i) => (
+                  <li key={i.id} className={i.done ? "track-item done" : "track-item"}>
+                    <label>
+                      <input type="checkbox" checked={i.done} onChange={() => actions.toggleTrackItem(track.id, i.id)} />
+                      <span className="track-box" aria-hidden="true" />
+                      <span className="track-item-label">{i.label}</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="track-remove"
+                      onClick={() => actions.removeTrackItem(track.id, i.id)}
+                      aria-label="Remove task"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        <div className="track-add">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") addItem();
-            }}
-            placeholder="Add a task…"
-          />
-          <button type="button" onClick={addItem} aria-label="Add task">
-            ＋
-          </button>
-        </div>
-
-        <div className="track-foot">
-          <div className="owner-pick small">
-            {(["p1", "both", "p2"] as TrackOwner[]).map((o) => (
-              <button
-                key={o}
-                type="button"
-                className={`op ${o}${track.owner === o ? " active" : ""}`}
-                onClick={() => actions.patchTrack(track.id, { owner: o })}
-              >
-                {ownerLabel(o)}
+            <div className="track-add">
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addItem();
+                }}
+                placeholder="Add a task…"
+              />
+              <button type="button" onClick={addItem} aria-label="Add task">
+                ＋
               </button>
-            ))}
+            </div>
+
+            <div className="track-foot">
+              <div className="owner-pick small">
+                {(["p1", "both", "p2"] as TrackOwner[]).map((o) => (
+                  <button
+                    key={o}
+                    type="button"
+                    className={`op ${o}${track.owner === o ? " active" : ""}`}
+                    onClick={() => actions.patchTrack(track.id, { owner: o })}
+                  >
+                    {ownerLabel(o)}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="track-delete" onClick={() => actions.removeTrack(track.id)}>
+                Delete
+              </button>
+            </div>
           </div>
-          <button type="button" className="track-delete" onClick={() => actions.removeTrack(track.id)}>
-            Delete
-          </button>
-        </div>
-      </div>
+        </>
+      )}
     </article>
   );
 }

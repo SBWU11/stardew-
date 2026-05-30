@@ -33,6 +33,8 @@ export type Track = {
   title: string;
   icon: string;
   owner: TrackOwner;
+  /** Reference context shown above the checklist (gift list, timing tips…). */
+  note?: string;
   items: TrackItem[];
 };
 

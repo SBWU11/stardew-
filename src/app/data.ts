@@ -373,6 +373,23 @@ export const villagers: Villager[] = [
   { name: "Wizard", season: "Winter", day: 17, loved: "Purple Mushroom, Solar Essence, Super Cucumber, Void Essence", liked: "Most gems & minerals" },
 ];
 
+// Rough "where to find them through the day" guide for the marriageable villagers.
+// Real schedules also shift with weather, season, and heart level — treat as a hint.
+export const villagerRoutines: Record<string, string> = {
+  Abigail: "Home above Pierre's shop in the mornings; roams town or the mountains midday; Stardrop Saloon on Friday evenings.",
+  Alex: "Around his grandparents' house on River Road and the town square; gridball and jogging by day; the beach on warm days.",
+  Elliott: "His cabin on the beach during the day; the library or the Saloon some evenings.",
+  Emily: "Home at 2 Willow Lane in the morning; tends the bar at the Stardrop Saloon in the evenings.",
+  Haley: "Home at 2 Willow Lane; out photographing around town midday; the beach on sunny days.",
+  Harvey: "Runs the medical clinic through the day; his apartment above it at night; occasionally the Saloon.",
+  Leah: "Her cottage in the forest most of the day; out foraging nearby; the Saloon on weekend evenings.",
+  Maru: "The Carpenter's house up the mountain; works shifts at Harvey's clinic (Tue & Thu); stargazes at night.",
+  Penny: "The trailer with Pam; tutors Jas & Vincent by the museum and river (Tue & Wed); the library.",
+  Sam: "Home at 1 Willow Lane; skateboarding around town; band practice and the Saloon on Friday nights.",
+  Sebastian: "His basement room at the Carpenter's; out by the mountain lake; the Saloon on Fridays with Sam & Abigail.",
+  Shane: "Works at JojaMart by day; Marnie's Ranch otherwise; drinks at the Stardrop Saloon most evenings.",
+};
+
 export const crops: Crop[] = [
   { name: "Strawberry", season: "Spring", grow: 8, regrow: 4, top: true, note: "Best Spring earner — buy seeds at the Egg Festival on Spring 13 and plant the same day." },
   { name: "Cauliflower", season: "Spring", grow: 12, top: true, note: "Bundle crop; high single-harvest value, keep gold ones for Quality Crops." },
@@ -418,6 +435,134 @@ export const buildings: Building[] = [
   { name: "Fish Pond", category: "Utility", gold: 5000, materials: "Stone ×200, Seaweed ×5, Green Algae ×5", size: "5×5", note: "Raise fish for roe, ink, and other goods." },
   { name: "Shed", category: "Utility", gold: 15000, materials: "Wood ×300", size: "7×3", note: "Empty interior — fill it with kegs, casks, or machines." },
   { name: "Big Shed", category: "Utility", gold: 20000, materials: "Wood ×550, Stone ×300", size: "7×3", requires: "Shed", note: "Larger interior with windows for even more machines." },
+];
+
+export type Tool = {
+  name: string;
+  /** When to upgrade + what each tier changes. */
+  note: string;
+};
+
+// Tools you upgrade at Clint's Blacksmith. Timing matters — you lose the tool for 2 days.
+export const tools: Tool[] = [
+  {
+    name: "Watering Can",
+    note: "Upgrade on a RAINY day — crops water themselves, so the 2 days without it cost nothing. Charge-up waters more each tier: 3 → 5 → 9 → 18 tiles.",
+  },
+  {
+    name: "Hoe",
+    note: "Upgrade when you're between plantings. Charge-up tills more each tier: 3 → 5 → 9 → 18 tiles.",
+  },
+  {
+    name: "Pickaxe",
+    note: "Mines faster and breaks tougher rocks each tier; Iridium clears the biggest nodes. Upgrade overnight when you don't need the mines.",
+  },
+  {
+    name: "Axe",
+    note: "Chops faster each tier; Copper clears large stumps, Iridium clears large logs. Upgrade on a town / social day.",
+  },
+  {
+    name: "Trash Can",
+    note: "Better gold refund when you trash items — no field downtime, so upgrade whenever you have the bars.",
+  },
+];
+
+// Every tool follows the same upgrade ladder (2 in-game days each).
+export const toolUpgrades: { tier: string; gold: number; bar: string }[] = [
+  { tier: "Copper", gold: 2000, bar: "Copper Bar ×5" },
+  { tier: "Steel", gold: 5000, bar: "Iron Bar ×5" },
+  { tier: "Gold", gold: 10000, bar: "Gold Bar ×5" },
+  { tier: "Iridium", gold: 25000, bar: "Iridium Bar ×5" },
+];
+
+export type MissionTemplate = {
+  name: string;
+  icon: string;
+  items: string[];
+};
+
+// Bigger multi-step goals you can drop onto the board ready-made.
+export const missionTemplates: MissionTemplate[] = [
+  {
+    name: "Reach the bottom of the Mines",
+    icon: "⛏️",
+    items: [
+      "Buy a sword from the Adventurer's Guild",
+      "Pack cooked food to heal",
+      "Ride the elevator down (it saves every 5 floors)",
+      "Reach floor 120 and grab the Skull Key",
+    ],
+  },
+  {
+    name: "Skull Cavern deep run",
+    icon: "💀",
+    items: [
+      "Stock 20+ bombs / mega bombs",
+      "Bring coffee or Spicy Eel for speed + luck",
+      "Go on a lucky day (check the TV Fortune Teller)",
+      "Stack staircases to skip floors fast",
+      "Reach floor 100",
+    ],
+  },
+  {
+    name: "Complete the Community Center",
+    icon: "🏛️",
+    items: [
+      "Finish the Crafts Room",
+      "Finish the Pantry",
+      "Finish the Fish Tank",
+      "Finish the Boiler Room",
+      "Finish the Bulletin Board",
+      "Pay off the Vault",
+    ],
+  },
+  {
+    name: "Unlock the Greenhouse",
+    icon: "🪴",
+    items: [
+      "Complete every Pantry bundle (Crops, Quality, Animal, Artisan)",
+      "Greenhouse repaired — grow any crop year-round",
+      "Plant Ancient Fruit / Starfruit for steady wine",
+    ],
+  },
+  {
+    name: "Fill the Museum",
+    icon: "🏺",
+    items: [
+      "Donate artifacts & minerals to Gunther",
+      "Hit 40 donations for a reward",
+      "Reach all 95 donations for the Stardrop",
+    ],
+  },
+  {
+    name: "Max a skill to level 10",
+    icon: "⭐",
+    items: [
+      "Pick the skill (Farming, Mining, Foraging, Fishing, Combat)",
+      "Choose your level 5 profession",
+      "Choose your level 10 profession",
+    ],
+  },
+  {
+    name: "Become Master Angler",
+    icon: "🎣",
+    items: [
+      "Catch all Spring & Summer fish",
+      "Catch all Fall & Winter fish",
+      "Catch the Legendary fish",
+      "Catch the Night Market & Ginger Island fish",
+    ],
+  },
+  {
+    name: "Find all the Stardrops",
+    icon: "🌟",
+    items: [
+      "Stardew Valley Fair — buy it for 2,000 star tokens",
+      "Mines floor 100 — open the treasure chest",
+      "Museum — reach all 95 donations",
+      "Get the Krobus, fishing-chest, and spouse Stardrops",
+    ],
+  },
 ];
 
 export const seasonFocus: Record<Season, string[]> = {
