@@ -57,7 +57,23 @@ export type Crop = {
   season: Season;
   grow: number;
   regrow?: number;
+  /** A standout best-profit crop for its season. */
+  top?: boolean;
   note?: string;
+};
+
+export type Building = {
+  name: string;
+  category: "Animal" | "Utility";
+  /** Gold cost at Robin's Carpenter Shop. */
+  gold: number;
+  /** Materials needed, e.g. "Wood ×300, Stone ×100". */
+  materials: string;
+  /** Footprint in tiles, e.g. "6×3". */
+  size: string;
+  /** Prerequisite building, if any. */
+  requires?: string;
+  note: string;
 };
 
 // Display order + colour accent for the seven Community Center rooms.
@@ -358,27 +374,50 @@ export const villagers: Villager[] = [
 ];
 
 export const crops: Crop[] = [
+  { name: "Strawberry", season: "Spring", grow: 8, regrow: 4, top: true, note: "Best Spring earner — buy seeds at the Egg Festival on Spring 13 and plant the same day." },
+  { name: "Cauliflower", season: "Spring", grow: 12, top: true, note: "Bundle crop; high single-harvest value, keep gold ones for Quality Crops." },
+  { name: "Potato", season: "Spring", grow: 6, top: true, note: "Bundle crop; fast, cheap, and can yield extra potatoes per harvest." },
   { name: "Parsnip", season: "Spring", grow: 4, note: "Bundle crop" },
   { name: "Green Bean", season: "Spring", grow: 10, regrow: 3, note: "Bundle crop" },
-  { name: "Cauliflower", season: "Spring", grow: 12, note: "Bundle crop" },
-  { name: "Potato", season: "Spring", grow: 6, note: "Bundle crop" },
-  { name: "Strawberry", season: "Spring", grow: 8, regrow: 4, note: "Buy seeds at Egg Festival on Spring 13" },
+  { name: "Rhubarb", season: "Spring", grow: 13, note: "Buy at the Desert Oasis; high value, great kegged into wine." },
   { name: "Carrot", season: "Spring", grow: 3, note: "1.6 seed from Spring artifact spots" },
+  { name: "Blueberry", season: "Summer", grow: 13, regrow: 4, top: true, note: "Bundle crop; regrows every 4 days with 3 berries each — huge season total." },
+  { name: "Starfruit", season: "Summer", grow: 13, top: true, note: "Highest base value crop — buy seeds at the Oasis; keg into wine for top profit." },
+  { name: "Hops", season: "Summer", grow: 11, regrow: 1, top: true, note: "Harvests daily once grown; Pale Ale via Keg is the best gold-per-day." },
   { name: "Tomato", season: "Summer", grow: 11, regrow: 4, note: "Bundle crop" },
   { name: "Hot Pepper", season: "Summer", grow: 5, regrow: 3, note: "Bundle crop and Shane/Lewis gift" },
-  { name: "Blueberry", season: "Summer", grow: 13, regrow: 4, note: "Bundle crop" },
   { name: "Melon", season: "Summer", grow: 12, note: "Bundle crop; gold quality for Quality Crops" },
   { name: "Wheat", season: "Summer", grow: 4, note: "Fodder bundle; also Fall" },
   { name: "Poppy", season: "Summer", grow: 7, note: "Chef bundle" },
   { name: "Red Cabbage", season: "Summer", grow: 9, note: "Dye bundle; normally Year 2+" },
   { name: "Summer Squash", season: "Summer", grow: 6, regrow: 3, note: "1.6 seed from Summer artifact spots" },
-  { name: "Corn", season: "Fall", grow: 14, regrow: 4, note: "Bundle crop; also Summer" },
+  { name: "Cranberries", season: "Fall", grow: 7, regrow: 5, top: true, note: "Best Fall profit per tile; 2 berries every 5 days. Buy seeds early." },
+  { name: "Pumpkin", season: "Fall", grow: 13, top: true, note: "Bundle crop; high value, keep gold ones for Quality Crops and the Fair." },
+  { name: "Grape", season: "Fall", grow: 10, regrow: 3, top: true, note: "Regrows every 3 days; strong keg/jar fodder." },
+  { name: "Corn", season: "Fall", grow: 14, regrow: 4, note: "Bundle crop; also Summer — survives into the next season." },
   { name: "Eggplant", season: "Fall", grow: 5, regrow: 5, note: "Bundle crop" },
-  { name: "Pumpkin", season: "Fall", grow: 13, note: "Bundle crop; gold quality for Quality Crops" },
   { name: "Yam", season: "Fall", grow: 10, note: "Bundle crop" },
   { name: "Sunflower", season: "Fall", grow: 8, note: "Dye bundle; also Summer" },
   { name: "Broccoli", season: "Fall", grow: 8, regrow: 4, note: "1.6 seed from Fall artifact spots" },
   { name: "Powdermelon", season: "Winter", grow: 7, note: "1.6 seed from Winter artifact spots" },
+];
+
+// Carpenter / animal buildings and the resources each needs. Costs from Robin's shop.
+export const buildings: Building[] = [
+  { name: "Coop", category: "Animal", gold: 4000, materials: "Wood ×300, Stone ×100", size: "6×3", note: "Houses 4 animals. Start: chickens. Buy from Marnie." },
+  { name: "Big Coop", category: "Animal", gold: 10000, materials: "Wood ×400, Stone ×150", size: "6×3", requires: "Coop", note: "Houses 8; adds incubator. Unlocks ducks." },
+  { name: "Deluxe Coop", category: "Animal", gold: 20000, materials: "Wood ×500, Stone ×200", size: "6×3", requires: "Big Coop", note: "Houses 12; auto-feed. Unlocks rabbits & dinosaurs." },
+  { name: "Barn", category: "Animal", gold: 6000, materials: "Wood ×350, Stone ×150", size: "7×4", note: "Houses 4 animals. Start: cows." },
+  { name: "Big Barn", category: "Animal", gold: 12000, materials: "Wood ×450, Stone ×200", size: "7×4", requires: "Barn", note: "Houses 8; animals give birth. Unlocks goats & pigs." },
+  { name: "Deluxe Barn", category: "Animal", gold: 25000, materials: "Wood ×550, Stone ×300", size: "7×4", requires: "Big Barn", note: "Houses 12; auto-feed. Unlocks sheep." },
+  { name: "Slime Hutch", category: "Animal", gold: 10000, materials: "Stone ×500, Refined Quartz ×10, Iron Bar ×1", size: "11×6", note: "Houses 20 slimes for slime balls." },
+  { name: "Silo", category: "Utility", gold: 100, materials: "Stone ×100, Clay ×10, Copper Bar ×5", size: "3×3", note: "Stores hay from cut grass. Build this before coops/barns." },
+  { name: "Well", category: "Utility", gold: 1000, materials: "Stone ×75", size: "3×3", note: "Refill your watering can out in the fields." },
+  { name: "Mill", category: "Utility", gold: 2500, materials: "Wood ×150, Stone ×50, Cloth ×4", size: "4×2", note: "Turns wheat into flour and beets into sugar." },
+  { name: "Stable", category: "Utility", gold: 10000, materials: "Hardwood ×100, Iron Bar ×5", size: "4×2", note: "Get a horse — about 30% faster movement." },
+  { name: "Fish Pond", category: "Utility", gold: 5000, materials: "Stone ×200, Seaweed ×5, Green Algae ×5", size: "5×5", note: "Raise fish for roe, ink, and other goods." },
+  { name: "Shed", category: "Utility", gold: 15000, materials: "Wood ×300", size: "7×3", note: "Empty interior — fill it with kegs, casks, or machines." },
+  { name: "Big Shed", category: "Utility", gold: 20000, materials: "Wood ×550, Stone ×300", size: "7×3", requires: "Shed", note: "Larger interior with windows for even more machines." },
 ];
 
 export const seasonFocus: Record<Season, string[]> = {

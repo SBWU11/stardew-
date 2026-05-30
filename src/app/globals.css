@@ -1183,6 +1183,144 @@ h2 {
   color: #9a4d22;
 }
 
+.crop-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.crop-top-tag {
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a6310;
+  background: #fbeec6;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.crop.top {
+  border-color: #e6c879;
+  box-shadow: inset 4px 0 0 #e8b53d;
+}
+
+/* ============================ Builds ============================ */
+.builds-view {
+  display: grid;
+  gap: 14px;
+}
+.build-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.build {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.build-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.build-name-row strong {
+  font-size: 0.98rem;
+}
+.build-req {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: var(--theme-soft);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.build-mats {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.build-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.build-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: none;
+}
+.build-gold {
+  font-family: var(--font-pixel), sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #9a7b1e;
+  background: #faf0cf;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.build-size {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+/* ============================ Birthday hold (Today) ============================ */
+.bday-hold {
+  display: grid;
+  gap: 7px;
+}
+.bday-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  text-align: left;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 2px solid var(--line);
+  border-left-width: 6px;
+  border-left-color: var(--p2);
+  background: var(--paper-2);
+  transition: border-color 0.15s;
+}
+.bday-row:hover {
+  border-color: var(--p2);
+}
+.bday-when {
+  grid-row: 1 / 3;
+  align-self: center;
+  font-weight: 900;
+  font-size: 0.78rem;
+  color: var(--p2);
+}
+.bday-who {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.bday-loves {
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
 /* ============================ Villagers ============================ */
 .villagers {
   display: grid;

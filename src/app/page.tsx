@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  buildings,
   bundleGroups,
   bundleItems,
   bundleRewards,
@@ -17,6 +18,7 @@ import {
   villagers,
   type BundleGroup,
   type BundleItem,
+  type Building,
   type Season,
 } from "./data";
 import {
@@ -27,7 +29,7 @@ import {
   type SyncStatus,
 } from "@/lib/store";
 
-type Tab = "today" | "bundles" | "watchlist" | "season" | "calendar" | "crops" | "villagers";
+type Tab = "today" | "bundles" | "watchlist" | "season" | "calendar" | "crops" | "villagers" | "builds";
 
 const TABS: [Tab, string, string][] = [
   ["today", "Today", "🌅"],
@@ -37,6 +39,7 @@ const TABS: [Tab, string, string][] = [
   ["calendar", "Calendar", "📅"],
   ["crops", "Crops", "🌾"],
   ["villagers", "Villagers", "🎁"],
+  ["builds", "Builds", "🔨"],
 ];
 
 let customIdSeq = 0;
@@ -219,6 +222,7 @@ export default function Home() {
             {tab === "calendar" && <CalendarView state={state} setDate={setDate} />}
             {tab === "crops" && <CropsView state={state} />}
             {tab === "villagers" && <VillagersView state={state} />}
+            {tab === "builds" && <BuildsView />}
           </>
         )}
       </main>
@@ -504,6 +508,11 @@ function TodayView({
     .filter((d) => d.last >= state.day && d.last <= state.day + 2)
     .sort((a, b) => a.last - b.last);
 
+  // This season's birthdays still ahead — hold their loved gifts, don't sell them.
+  const birthdayHold = villagers
+    .filter((v) => v.season === state.season && v.day >= state.day)
+    .sort((a, b) => a.day - b.day);
+
   return (
     <div className="grid-today">
       <Card title={`Today · ${state.season} ${state.day}`} accent="#6aa84f">
@@ -551,6 +560,26 @@ function TodayView({
                 +{keepNow.length - 18} more in Bundles →
               </button>
             )}
+          </div>
+        )}
+      </Card>
+
+      <Card
+        title="🎂 Hold these birthday gifts"
+        accent="#b15ba0"
+        subtitle="Loved gifts for this season's upcoming birthdays — don't sell them"
+      >
+        {birthdayHold.length === 0 ? (
+          <p className="muted">No more birthdays left in {state.season}. Gifts are fair game to sell.</p>
+        ) : (
+          <div className="bday-hold">
+            {birthdayHold.map((v) => (
+              <button key={v.name} type="button" className="bday-row" onClick={() => setDate({ day: v.day })}>
+                <span className="bday-when">{v.day === state.day ? "Today" : `Day ${v.day}`}</span>
+                <span className="bday-who">{v.name}</span>
+                <span className="bday-loves">{v.loved}</span>
+              </button>
+            ))}
           </div>
         )}
       </Card>
@@ -619,7 +648,8 @@ function BundlesView({
   toggleStar: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [seasonOnly, setSeasonOnly] = useState(false);
+  // Default to the current season so you only see what you can work on right now.
+  const [seasonOnly, setSeasonOnly] = useState(true);
   const [hideDone, setHideDone] = useState(false);
 
   const q = query.trim().toLowerCase();
@@ -927,34 +957,46 @@ function CalendarView({
 /* ============================ Crops ============================ */
 
 function CropsView({ state }: { state: FarmState }) {
+  // Current season first, so what to plant now is at the top.
+  const orderedSeasons = [state.season, ...seasons.filter((s) => s !== state.season)];
   return (
     <div className="crops">
-      {seasons.map((s) => (
-        <Card key={s} title={`${seasonEmoji[s]} ${s}`} accent="#6aa84f">
-          <ul className="crop-list">
-            {crops
-              .filter((c) => c.season === s)
-              .map((c) => {
+      {orderedSeasons.map((s) => {
+        // Top picks first, then the rest — both in their listed order.
+        const seasonCrops = crops.filter((c) => c.season === s);
+        const ordered = [...seasonCrops].sort((a, b) => Number(!!b.top) - Number(!!a.top));
+        const topNames = seasonCrops.filter((c) => c.top).map((c) => c.name);
+        return (
+          <Card
+            key={s}
+            title={`${seasonEmoji[s]} ${s}${s === state.season ? " · now" : ""}`}
+            accent={s === state.season ? "#c2693a" : "#6aa84f"}
+            subtitle={topNames.length ? `★ Best earners: ${topNames.join(", ")}` : undefined}
+          >
+            <ul className="crop-list">
+              {ordered.map((c) => {
                 const last = 28 - c.grow;
                 const tooLate = state.season === s && state.day > last;
                 return (
-                  <li key={c.name} className={tooLate ? "crop too-late" : "crop"}>
+                  <li key={c.name} className={`crop${c.top ? " top" : ""}${tooLate ? " too-late" : ""}`}>
                     <div className="crop-main">
-                      <strong>{c.name}</strong>
+                      <div className="crop-name-row">
+                        <strong>{c.name}</strong>
+                        {c.top && <span className="crop-top-tag">★ top</span>}
+                      </div>
                       {c.note && <small>{c.note}</small>}
                     </div>
                     <span className="crop-grow">
                       {c.grow}d{c.regrow ? ` +${c.regrow}d` : ""}
                     </span>
-                    <span className="crop-last">
-                      {tooLate ? "too late" : `plant by ${last}`}
-                    </span>
+                    <span className="crop-last">{tooLate ? "too late" : `plant by ${last}`}</span>
                   </li>
                 );
               })}
-          </ul>
-        </Card>
-      ))}
+            </ul>
+          </Card>
+        );
+      })}
     </div>
   );
 }
@@ -963,7 +1005,8 @@ function CropsView({ state }: { state: FarmState }) {
 
 function VillagersView({ state }: { state: FarmState }) {
   const [q, setQ] = useState("");
-  const [seasonFilter, setSeasonFilter] = useState<Season | "All">("All");
+  // Start on the current season's birthdays — the gifts that matter right now.
+  const [seasonFilter, setSeasonFilter] = useState<Season | "All">(state.season);
 
   const query = q.trim().toLowerCase();
   const list = villagers
@@ -1037,6 +1080,70 @@ function VillagersView({ state }: { state: FarmState }) {
         })}
         {list.length === 0 && <p className="empty">No villager matches that.</p>}
       </div>
+    </div>
+  );
+}
+
+/* ============================ Builds ============================ */
+
+function BuildsView() {
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+
+  const list = buildings.filter(
+    (b) =>
+      !query ||
+      b.name.toLowerCase().includes(query) ||
+      b.materials.toLowerCase().includes(query) ||
+      b.note.toLowerCase().includes(query),
+  );
+
+  const categories: [Building["category"], string][] = [
+    ["Animal", "🐔 Animal buildings"],
+    ["Utility", "🛠️ Farm & utility"],
+  ];
+
+  return (
+    <div className="builds-view">
+      <div className="villager-controls">
+        <label className="search">
+          <span aria-hidden="true">🔍</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search a building or a material — coop, stone, hardwood…"
+          />
+        </label>
+      </div>
+
+      {list.length === 0 && <p className="empty">No building matches that.</p>}
+
+      {categories.map(([cat, label]) => {
+        const items = list.filter((b) => b.category === cat);
+        if (items.length === 0) return null;
+        return (
+          <Card key={cat} title={label} accent="#9c7b4d">
+            <ul className="build-list">
+              {items.map((b) => (
+                <li key={b.name} className="build">
+                  <div className="build-main">
+                    <div className="build-name-row">
+                      <strong>{b.name}</strong>
+                      {b.requires && <span className="build-req">needs {b.requires}</span>}
+                    </div>
+                    <small className="build-mats">{b.materials}</small>
+                    <small className="build-note">{b.note}</small>
+                  </div>
+                  <div className="build-meta">
+                    <span className="build-gold">{b.gold.toLocaleString()}g</span>
+                    <span className="build-size">{b.size}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        );
+      })}
     </div>
   );
 }
