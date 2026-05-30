@@ -19,6 +19,23 @@ export type CustomItem = {
   done: boolean;
 };
 
+export type TrackOwner = "p1" | "p2" | "both";
+
+export type TrackItem = {
+  id: string;
+  label: string;
+  done: boolean;
+};
+
+/** A shared goal on the tracker board — a romance, a build, a custom mission. */
+export type Track = {
+  id: string;
+  title: string;
+  icon: string;
+  owner: TrackOwner;
+  items: TrackItem[];
+};
+
 export type FarmState = {
   /** Monotonic revision used for last-write-wins sync. */
   rev: number;
@@ -33,6 +50,8 @@ export type FarmState = {
   starred: Record<string, boolean>;
   /** Free-text important items beyond the bundle list. */
   customItems: CustomItem[];
+  /** Shared goal board — romances, builds, and custom missions. */
+  tracks: Track[];
 };
 
 export type SyncStatus = "local" | "connecting" | "synced" | "offline";
@@ -59,6 +78,7 @@ export function defaultFarmState(): FarmState {
     dailyDone: {},
     starred: {},
     customItems: [],
+    tracks: [],
   };
 }
 
@@ -76,6 +96,7 @@ function normalize(input: Partial<FarmState> | null | undefined): FarmState {
     dailyDone: input.dailyDone ?? {},
     starred: input.starred ?? {},
     customItems: Array.isArray(input.customItems) ? input.customItems : [],
+    tracks: Array.isArray(input.tracks) ? input.tracks : [],
   };
 }
 

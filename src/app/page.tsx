@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildings,
   bundleGroups,
@@ -20,6 +20,7 @@ import {
   type BundleItem,
   type Building,
   type Season,
+  type Villager,
 } from "./data";
 import {
   progressFor,
@@ -27,12 +28,16 @@ import {
   type FarmState,
   type Progress,
   type SyncStatus,
+  type Track,
+  type TrackItem,
+  type TrackOwner,
 } from "@/lib/store";
 
-type Tab = "today" | "bundles" | "watchlist" | "season" | "calendar" | "crops" | "villagers" | "builds";
+type Tab = "today" | "board" | "bundles" | "watchlist" | "season" | "calendar" | "crops" | "villagers" | "builds";
 
 const TABS: [Tab, string, string][] = [
   ["today", "Today", "🌅"],
+  ["board", "Board", "🎯"],
   ["bundles", "Bundles", "📦"],
   ["watchlist", "Starred", "⭐"],
   ["season", "Season", "🌱"],
@@ -43,6 +48,12 @@ const TABS: [Tab, string, string][] = [
 ];
 
 let customIdSeq = 0;
+
+let idSeq = 0;
+function newId(prefix: string) {
+  idSeq += 1;
+  return `${prefix}-${Date.now().toString(36)}-${idSeq}`;
+}
 
 const seasonEmoji: Record<Season, string> = {
   Spring: "🌸",
@@ -116,6 +127,41 @@ export default function Home() {
     }));
   const removeCustom = (id: string) =>
     mutate((s) => ({ ...s, customItems: s.customItems.filter((c) => c.id !== id) }));
+
+  // ---- tracker board ---------------------------------------------------
+  const trackActions: TrackActions = {
+    addTrack: (track) =>
+      mutate((s) => ({ ...s, tracks: [...s.tracks, { ...track, id: newId("trk") }] })),
+    removeTrack: (id) => mutate((s) => ({ ...s, tracks: s.tracks.filter((t) => t.id !== id) })),
+    patchTrack: (id, patch) =>
+      mutate((s) => ({ ...s, tracks: s.tracks.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+    addTrackItem: (id, label) => {
+      const clean = label.trim();
+      if (!clean) return;
+      mutate((s) => ({
+        ...s,
+        tracks: s.tracks.map((t) =>
+          t.id === id ? { ...t, items: [...t.items, { id: newId("itm"), label: clean, done: false }] } : t,
+        ),
+      }));
+    },
+    toggleTrackItem: (tid, iid) =>
+      mutate((s) => ({
+        ...s,
+        tracks: s.tracks.map((t) =>
+          t.id === tid
+            ? { ...t, items: t.items.map((i) => (i.id === iid ? { ...i, done: !i.done } : i)) }
+            : t,
+        ),
+      })),
+    removeTrackItem: (tid, iid) =>
+      mutate((s) => ({
+        ...s,
+        tracks: s.tracks.map((t) =>
+          t.id === tid ? { ...t, items: t.items.filter((i) => i.id !== iid) } : t,
+        ),
+      })),
+  };
 
   const [search, setSearch] = useState("");
 
@@ -206,6 +252,7 @@ export default function Home() {
                 toggleDaily={toggleDaily}
               />
             )}
+            {tab === "board" && <BoardView state={state} actions={trackActions} />}
             {tab === "bundles" && <BundlesView state={state} toggle={toggle} toggleStar={toggleStar} />}
             {tab === "watchlist" && (
               <WatchlistView
@@ -1081,6 +1128,345 @@ function VillagersView({ state }: { state: FarmState }) {
         {list.length === 0 && <p className="empty">No villager matches that.</p>}
       </div>
     </div>
+  );
+}
+
+/* ============================ Board ============================ */
+
+type TrackActions = {
+  addTrack: (track: Omit<Track, "id">) => void;
+  removeTrack: (id: string) => void;
+  patchTrack: (id: string, patch: Partial<Track>) => void;
+  addTrackItem: (id: string, label: string) => void;
+  toggleTrackItem: (trackId: string, itemId: string) => void;
+  removeTrackItem: (trackId: string, itemId: string) => void;
+};
+
+const TRACK_GROUPS: TrackOwner[] = ["p1", "both", "p2"];
+
+// Seed a romance track from a villager's gifts + the heart milestones.
+function romanceItems(v: Villager): TrackItem[] {
+  return [
+    `Reach 8 ❤ — then give a Bouquet to start dating`,
+    `Reach 10 ❤ — then give the Mermaid's Pendant to propose`,
+    `Keep gifting loves: ${v.loved}`,
+    `Give a loved gift on their birthday (${v.season} ${v.day}) — counts 8×`,
+    `Watch their heart events as they unlock`,
+  ].map((label) => ({ id: newId("itm"), label, done: false }));
+}
+
+// Seed a build track from the Carpenter materials + gold.
+function buildItems(b: Building): TrackItem[] {
+  const labels = [
+    ...(b.requires ? [`Build ${b.requires} first`] : []),
+    ...b.materials.split(",").map((m) => `Gather ${m.trim()}`),
+    `Save ${b.gold.toLocaleString()}g`,
+    `Order it from Robin — takes 2 days to finish`,
+  ];
+  return labels.map((label) => ({ id: newId("itm"), label, done: false }));
+}
+
+function BoardView({ state, actions }: { state: FarmState; actions: TrackActions }) {
+  const tracks = state.tracks;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<TrackOwner, boolean>>({
+    p1: true,
+    both: true,
+    p2: true,
+  });
+
+  // Jump to the newest goal whenever one is added.
+  const prevLen = useRef(tracks.length);
+  useEffect(() => {
+    if (tracks.length > prevLen.current) setSelectedId(tracks[tracks.length - 1].id);
+    prevLen.current = tracks.length;
+  }, [tracks]);
+
+  const ownerLabel = (o: TrackOwner) =>
+    o === "p1"
+      ? state.players[0] || "Player 1"
+      : o === "p2"
+        ? state.players[1] || "Player 2"
+        : "Shared";
+
+  const selected = tracks.find((t) => t.id === selectedId) ?? tracks[0] ?? null;
+  const toggleGroup = (o: TrackOwner) => setOpenGroups((g) => ({ ...g, [o]: !g[o] }));
+
+  return (
+    <div className="board">
+      <TrackComposer state={state} addTrack={actions.addTrack} />
+
+      {tracks.length === 0 ? (
+        <div className="board-empty">
+          <strong>🎯 Your goal board is empty</strong>
+          <p>
+            Add a track above — romance a villager, plan a build, or anything you&apos;re working toward. Pick who
+            it&apos;s for (you, your co-op partner, or both), then tick tasks off together. Everything syncs to your
+            room.
+          </p>
+        </div>
+      ) : (
+        <div className="board-split">
+          <aside className="board-nav">
+            {TRACK_GROUPS.map((o) => {
+              const list = tracks.filter((t) => t.owner === o);
+              const open = openGroups[o];
+              return (
+                <div key={o} className={`nav-group owner-${o}`}>
+                  <button
+                    type="button"
+                    className="nav-group-head"
+                    onClick={() => toggleGroup(o)}
+                    aria-expanded={open}
+                  >
+                    <span className="nav-caret" aria-hidden="true">
+                      {open ? "▾" : "▸"}
+                    </span>
+                    <span className="nav-dot" aria-hidden="true" />
+                    <span className="nav-group-name">{ownerLabel(o)}</span>
+                    <span className="nav-group-count">{list.length}</span>
+                  </button>
+                  {open &&
+                    (list.length === 0 ? (
+                      <p className="nav-empty">No goals yet</p>
+                    ) : (
+                      <ul className="nav-list">
+                        {list.map((t) => {
+                          const done = t.items.filter((i) => i.done).length;
+                          const total = t.items.length;
+                          const pct = total ? Math.round((done / total) * 100) : 0;
+                          return (
+                            <li key={t.id}>
+                              <button
+                                type="button"
+                                className={`nav-item${selected?.id === t.id ? " active" : ""}`}
+                                onClick={() => setSelectedId(t.id)}
+                              >
+                                <span className="nav-item-icon" aria-hidden="true">
+                                  {t.icon}
+                                </span>
+                                <span className="nav-item-title">{t.title}</span>
+                                <span className="nav-item-count">{total ? `${done}/${total}` : "—"}</span>
+                                <span className="nav-item-bar">
+                                  <span style={{ width: `${pct}%` }} />
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ))}
+                </div>
+              );
+            })}
+          </aside>
+
+          <section className="board-detail">
+            {selected ? (
+              <TrackCard track={selected} ownerLabel={ownerLabel} actions={actions} />
+            ) : (
+              <p className="empty">Pick a goal from the list to see its tasks.</p>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrackComposer({
+  state,
+  addTrack,
+}: {
+  state: FarmState;
+  addTrack: TrackActions["addTrack"];
+}) {
+  const [kind, setKind] = useState<"romance" | "build" | "custom">("romance");
+  const [villager, setVillager] = useState(villagers[0].name);
+  const [building, setBuilding] = useState(buildings[0].name);
+  const [title, setTitle] = useState("");
+  const [owner, setOwner] = useState<TrackOwner>("p1");
+
+  const submit = () => {
+    if (kind === "romance") {
+      const v = villagers.find((x) => x.name === villager);
+      if (!v) return;
+      addTrack({ title: `Romance ${v.name}`, icon: "💕", owner, items: romanceItems(v) });
+    } else if (kind === "build") {
+      const b = buildings.find((x) => x.name === building);
+      if (!b) return;
+      addTrack({ title: b.name, icon: "🔨", owner, items: buildItems(b) });
+    } else {
+      const clean = title.trim();
+      if (!clean) return;
+      addTrack({ title: clean, icon: "🎯", owner, items: [] });
+      setTitle("");
+    }
+  };
+
+  const kinds: [typeof kind, string][] = [
+    ["romance", "💕 Romance"],
+    ["build", "🔨 Build"],
+    ["custom", "🎯 Custom"],
+  ];
+  const owners: [TrackOwner, string][] = [
+    ["p1", state.players[0] || "P1"],
+    ["both", "Both"],
+    ["p2", state.players[1] || "P2"],
+  ];
+
+  return (
+    <div className="composer">
+      <div className="composer-kinds">
+        {kinds.map(([k, label]) => (
+          <button key={k} type="button" className={kind === k ? "ck active" : "ck"} onClick={() => setKind(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="composer-row">
+        {kind === "romance" && (
+          <select value={villager} onChange={(e) => setVillager(e.target.value)} aria-label="Villager to romance">
+            {villagers.map((v) => (
+              <option key={v.name} value={v.name}>
+                {v.name} · {v.season} {v.day}
+              </option>
+            ))}
+          </select>
+        )}
+        {kind === "build" && (
+          <select value={building} onChange={(e) => setBuilding(e.target.value)} aria-label="Building to plan">
+            {buildings.map((b) => (
+              <option key={b.name} value={b.name}>
+                {b.name} · {b.gold.toLocaleString()}g
+              </option>
+            ))}
+          </select>
+        )}
+        {kind === "custom" && (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+            placeholder="Goal name — e.g. Reach the bottom of the mines"
+          />
+        )}
+        <div className="owner-pick">
+          {owners.map(([o, label]) => (
+            <button
+              key={o}
+              type="button"
+              className={`op ${o}${owner === o ? " active" : ""}`}
+              onClick={() => setOwner(o)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="composer-add" onClick={submit}>
+          ＋ Add track
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TrackCard({
+  track,
+  ownerLabel,
+  actions,
+}: {
+  track: Track;
+  ownerLabel: (o: TrackOwner) => string;
+  actions: TrackActions;
+}) {
+  const [draft, setDraft] = useState("");
+  const done = track.items.filter((i) => i.done).length;
+  const total = track.items.length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const complete = total > 0 && done === total;
+
+  const addItem = () => {
+    actions.addTrackItem(track.id, draft);
+    setDraft("");
+  };
+
+  return (
+    <article className={`track owner-${track.owner}${complete ? " complete" : ""}`}>
+      <header className="track-head">
+        <span className="track-icon" aria-hidden="true">
+          {track.icon}
+        </span>
+        <span className="track-title">{track.title}</span>
+        <span className={`track-owner ${track.owner}`}>{ownerLabel(track.owner)}</span>
+      </header>
+
+      <div className="track-bar">
+        <div className="track-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="track-meta">
+        <span>{total ? `${done}/${total} done` : "No tasks yet"}</span>
+        {complete && <span className="track-done-tag">✓ complete</span>}
+      </div>
+
+      <div className="track-body">
+        {track.items.length > 0 && (
+          <ul className="track-items">
+            {track.items.map((i) => (
+              <li key={i.id} className={i.done ? "track-item done" : "track-item"}>
+                <label>
+                  <input type="checkbox" checked={i.done} onChange={() => actions.toggleTrackItem(track.id, i.id)} />
+                  <span className="track-box" aria-hidden="true" />
+                  <span className="track-item-label">{i.label}</span>
+                </label>
+                <button
+                  type="button"
+                  className="track-remove"
+                  onClick={() => actions.removeTrackItem(track.id, i.id)}
+                  aria-label="Remove task"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="track-add">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addItem();
+            }}
+            placeholder="Add a task…"
+          />
+          <button type="button" onClick={addItem} aria-label="Add task">
+            ＋
+          </button>
+        </div>
+
+        <div className="track-foot">
+          <div className="owner-pick small">
+            {(["p1", "both", "p2"] as TrackOwner[]).map((o) => (
+              <button
+                key={o}
+                type="button"
+                className={`op ${o}${track.owner === o ? " active" : ""}`}
+                onClick={() => actions.patchTrack(track.id, { owner: o })}
+              >
+                {ownerLabel(o)}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="track-delete" onClick={() => actions.removeTrack(track.id)}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 
