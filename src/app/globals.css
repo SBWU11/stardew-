@@ -1751,6 +1751,123 @@ h2 {
   color: var(--ink-soft);
 }
 
+/* ============================ Recipes ============================ */
+.recipes-view {
+  display: grid;
+  gap: 14px;
+}
+.recipe-count {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  background: var(--theme-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.recipes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.recipe-list,
+.shopping-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.recipe-row,
+.makeable {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.recipe-row:not(.unlocked) {
+  opacity: 0.72;
+}
+.recipe-row.unlocked,
+.makeable.picked {
+  border-color: var(--theme);
+  background: var(--theme-soft);
+}
+.recipe-main {
+  min-width: 0;
+}
+.recipe-main strong {
+  display: block;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.recipe-main small {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+.recipe-ings {
+  color: var(--ink) !important;
+  font-weight: 600;
+}
+.recipe-toggle {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--theme);
+  font-weight: 900;
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.12s, border-color 0.12s;
+}
+.recipe-toggle.on {
+  background: var(--theme);
+  border-color: var(--theme);
+  color: #fff;
+}
+.recipe-toggle:hover {
+  border-color: var(--theme);
+}
+.shopping-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.shopping-item {
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+.shopping-qty {
+  flex: none;
+  font-weight: 900;
+  font-size: 0.8rem;
+  color: var(--ink);
+  background: var(--theme-soft);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+@media (max-width: 820px) {
+  .recipes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ============================ Birthday hold (Today) ============================ */
 .bday-hold {
   display: grid;

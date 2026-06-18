@@ -11,6 +11,7 @@ import {
   crops,
   isAvailableInSeason,
   missionTemplates,
+  recipes,
   roomAccent,
   roomOrder,
   seasonFocus,
@@ -38,7 +39,17 @@ import {
   type TrackOwner,
 } from "@/lib/store";
 
-type Tab = "today" | "board" | "bundles" | "watchlist" | "season" | "calendar" | "crops" | "villagers" | "builds";
+type Tab =
+  | "today"
+  | "board"
+  | "bundles"
+  | "watchlist"
+  | "season"
+  | "calendar"
+  | "crops"
+  | "villagers"
+  | "builds"
+  | "recipes";
 
 const TABS: [Tab, string, string][] = [
   ["today", "Today", "🌅"],
@@ -50,6 +61,7 @@ const TABS: [Tab, string, string][] = [
   ["crops", "Crops", "🌾"],
   ["villagers", "Villagers", "🎁"],
   ["builds", "Builds", "🔨"],
+  ["recipes", "Recipes", "🍳"],
 ];
 
 let customIdSeq = 0;
@@ -136,6 +148,17 @@ export default function Home() {
     }));
   const removeCustom = (id: string) =>
     mutate((s) => ({ ...s, customItems: s.customItems.filter((c) => c.id !== id) }));
+
+  // ---- recipes ---------------------------------------------------------
+  const toggleRecipeUnlocked = (name: string) =>
+    mutate((s) => {
+      const unlocked = { ...s.recipesUnlocked, [name]: !s.recipesUnlocked[name] };
+      // Dropping a recipe you no longer have shouldn't leave it on the save plan.
+      const picked = unlocked[name] ? s.recipesPicked : { ...s.recipesPicked, [name]: false };
+      return { ...s, recipesUnlocked: unlocked, recipesPicked: picked };
+    });
+  const toggleRecipePicked = (name: string) =>
+    mutate((s) => ({ ...s, recipesPicked: { ...s.recipesPicked, [name]: !s.recipesPicked[name] } }));
 
   // ---- tracker board ---------------------------------------------------
   const trackActions: TrackActions = {
@@ -279,6 +302,13 @@ export default function Home() {
             {tab === "crops" && <CropsView state={state} />}
             {tab === "villagers" && <VillagersView state={state} />}
             {tab === "builds" && <BuildsView />}
+            {tab === "recipes" && (
+              <RecipesView
+                state={state}
+                toggleUnlocked={toggleRecipeUnlocked}
+                togglePicked={toggleRecipePicked}
+              />
+            )}
           </>
         )}
       </main>
@@ -1619,6 +1649,146 @@ function BuildsView() {
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+/* ============================ Recipes ============================ */
+
+function RecipesView({
+  state,
+  toggleUnlocked,
+  togglePicked,
+}: {
+  state: FarmState;
+  toggleUnlocked: (name: string) => void;
+  togglePicked: (name: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+
+  const matches = (r: (typeof recipes)[number]) =>
+    !query ||
+    r.name.toLowerCase().includes(query) ||
+    r.ingredients.some((i) => i.item.toLowerCase().includes(query));
+
+  const allList = recipes.filter(matches);
+  const unlocked = recipes.filter((r) => state.recipesUnlocked[r.name]);
+  const unlockedList = unlocked.filter(matches);
+  const unlockedCount = unlocked.length;
+
+  // Aggregate the ingredients of every picked recipe into one save list.
+  const picked = unlocked.filter((r) => state.recipesPicked[r.name]);
+  const shopping = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const r of picked) {
+      for (const { item, qty } of r.ingredients) {
+        totals.set(item, (totals.get(item) ?? 0) + qty);
+      }
+    }
+    return [...totals.entries()]
+      .map(([item, qty]) => ({ item, qty }))
+      .sort((a, b) => a.item.localeCompare(b.item));
+  }, [picked]);
+
+  return (
+    <div className="recipes-view">
+      <div className="villager-controls">
+        <label className="search">
+          <span aria-hidden="true">🔍</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search a recipe or an ingredient — pizza, sugar, egg…"
+          />
+        </label>
+        <span className="recipe-count">
+          {unlockedCount}/{recipes.length} unlocked
+        </span>
+      </div>
+
+      <div className="recipes-grid">
+        {/* 1 — full list, toggle what you've learned */}
+        <Card title="📖 All recipes" subtitle="Tap one you've learned" accent="#9c7b4d">
+          {allList.length === 0 && <p className="empty">No recipe matches that.</p>}
+          <ul className="recipe-list">
+            {allList.map((r) => {
+              const on = !!state.recipesUnlocked[r.name];
+              return (
+                <li key={r.name} className={`recipe-row${on ? " unlocked" : ""}`}>
+                  <button
+                    type="button"
+                    className={`recipe-toggle${on ? " on" : ""}`}
+                    onClick={() => toggleUnlocked(r.name)}
+                    aria-pressed={on}
+                    title={on ? "Learned — tap to remove" : "Mark as learned"}
+                  >
+                    {on ? "✓" : ""}
+                  </button>
+                  <div className="recipe-main">
+                    <strong>{r.name}</strong>
+                    <small>{r.source}</small>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+
+        {/* 2 — what you can make right now + pick for the plan */}
+        <Card
+          title="🍳 You can make"
+          subtitle={picked.length ? `${picked.length} picked` : "Tick ones to plan ingredients"}
+          accent="#c2693a"
+        >
+          {unlockedCount === 0 ? (
+            <p className="empty">Mark recipes you&apos;ve learned to see them here.</p>
+          ) : unlockedList.length === 0 ? (
+            <p className="empty">No learned recipe matches that.</p>
+          ) : (
+            <ul className="recipe-list">
+              {unlockedList.map((r) => {
+                const on = !!state.recipesPicked[r.name];
+                return (
+                  <li key={r.name} className={`makeable${on ? " picked" : ""}`}>
+                    <button
+                      type="button"
+                      className={`recipe-toggle pick${on ? " on" : ""}`}
+                      onClick={() => togglePicked(r.name)}
+                      aria-pressed={on}
+                      title={on ? "On the save list" : "Add to the save list"}
+                    >
+                      {on ? "✓" : ""}
+                    </button>
+                    <div className="recipe-main">
+                      <strong>{r.name}</strong>
+                      <small className="recipe-ings">
+                        {r.ingredients.map((i) => (i.qty > 1 ? `${i.item} ×${i.qty}` : i.item)).join(" · ")}
+                      </small>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        {/* 3 — aggregated ingredients to save */}
+        <Card title="🧺 Save these" subtitle="From every picked recipe" accent="#5aa85f">
+          {shopping.length === 0 ? (
+            <p className="empty">Pick a recipe to build your save list.</p>
+          ) : (
+            <ul className="shopping-list">
+              {shopping.map(({ item, qty }) => (
+                <li key={item} className="shopping-row">
+                  <span className="shopping-item">{item}</span>
+                  <span className="shopping-qty">×{qty}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

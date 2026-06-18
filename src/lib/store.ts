@@ -54,6 +54,10 @@ export type FarmState = {
   customItems: CustomItem[];
   /** Shared goal board — romances, builds, and custom missions. */
   tracks: Track[];
+  /** Cooking recipes the players have learned, keyed by recipe name. */
+  recipesUnlocked: Record<string, boolean>;
+  /** Unlocked recipes picked for the "save these ingredients" plan, by name. */
+  recipesPicked: Record<string, boolean>;
 };
 
 export type SyncStatus = "local" | "connecting" | "synced" | "offline";
@@ -81,6 +85,8 @@ export function defaultFarmState(): FarmState {
     starred: {},
     customItems: [],
     tracks: [],
+    recipesUnlocked: {},
+    recipesPicked: {},
   };
 }
 
@@ -99,6 +105,8 @@ function normalize(input: Partial<FarmState> | null | undefined): FarmState {
     starred: input.starred ?? {},
     customItems: Array.isArray(input.customItems) ? input.customItems : [],
     tracks: Array.isArray(input.tracks) ? input.tracks : [],
+    recipesUnlocked: input.recipesUnlocked ?? {},
+    recipesPicked: input.recipesPicked ?? {},
   };
 }
 

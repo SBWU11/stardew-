@@ -641,3 +641,90 @@ export const bundleGroups: BundleGroup[] = (() => {
     };
   });
 })();
+
+/* ============================ Cooking recipes ============================ */
+
+export type RecipeIngredient = { item: string; qty: number };
+
+export type Recipe = {
+  name: string;
+  ingredients: RecipeIngredient[];
+  /** How the recipe is learned. */
+  source: string;
+};
+
+const ing = (item: string, qty = 1): RecipeIngredient => ({ item, qty });
+
+// The full cooking-recipe list. Names match the in-game dishes; ingredient names
+// match what you keep in your chests so the save list reads like a shopping run.
+export const recipes: Recipe[] = [
+  { name: "Fried Egg", ingredients: [ing("Egg")], source: "Starter recipe" },
+  { name: "Omelet", ingredients: [ing("Egg"), ing("Milk")], source: "Queen of Sauce · Spring 28 Y1" },
+  { name: "Salad", ingredients: [ing("Leek"), ing("Dandelion"), ing("Vinegar")], source: "Saloon · 220g" },
+  { name: "Cheese Cauliflower", ingredients: [ing("Cauliflower"), ing("Cheese")], source: "Queen of Sauce · Fall 14 Y1" },
+  { name: "Baked Fish", ingredients: [ing("Sunfish"), ing("Bream"), ing("Wheat Flour")], source: "Queen of Sauce · Summer 7 Y1" },
+  { name: "Parsnip Soup", ingredients: [ing("Parsnip"), ing("Milk"), ing("Vinegar")], source: "Caroline · 3 hearts" },
+  { name: "Vegetable Medley", ingredients: [ing("Tomato"), ing("Beet")], source: "Caroline · 7 hearts" },
+  { name: "Complete Breakfast", ingredients: [ing("Fried Egg"), ing("Milk"), ing("Hashbrowns"), ing("Pancakes")], source: "Queen of Sauce · Spring 21 Y2" },
+  { name: "Fried Calamari", ingredients: [ing("Squid"), ing("Wheat Flour"), ing("Oil")], source: "Jodi · 3 hearts" },
+  { name: "Strange Bun", ingredients: [ing("Wheat Flour"), ing("Periwinkle"), ing("Void Mayonnaise")], source: "Shane · 7 hearts" },
+  { name: "Lucky Lunch", ingredients: [ing("Sea Cucumber"), ing("Tortilla"), ing("Blue Jazz")], source: "Queen of Sauce · Spring 28 Y2" },
+  { name: "Fried Mushroom", ingredients: [ing("Common Mushroom"), ing("Morel"), ing("Oil")], source: "Demetrius · 3 hearts" },
+  { name: "Pizza", ingredients: [ing("Wheat Flour"), ing("Tomato"), ing("Cheese")], source: "Saloon · 150g" },
+  { name: "Bean Hotpot", ingredients: [ing("Green Bean", 2)], source: "Clint · 7 hearts" },
+  { name: "Glazed Yams", ingredients: [ing("Yam"), ing("Sugar")], source: "Queen of Sauce · Fall 21 Y1" },
+  { name: "Carp Surprise", ingredients: [ing("Carp", 4)], source: "Queen of Sauce · Summer 7 Y2" },
+  { name: "Hashbrowns", ingredients: [ing("Potato"), ing("Oil")], source: "Saloon · 50g" },
+  { name: "Pancakes", ingredients: [ing("Wheat Flour"), ing("Egg")], source: "Queen of Sauce · Summer 14 Y1" },
+  { name: "Salmon Dinner", ingredients: [ing("Salmon"), ing("Amaranth"), ing("Kale")], source: "Gus · 3 hearts" },
+  { name: "Fish Taco", ingredients: [ing("Tuna"), ing("Tortilla"), ing("Red Cabbage")], source: "Linus · 7 hearts" },
+  { name: "Crispy Bass", ingredients: [ing("Largemouth Bass"), ing("Wheat Flour"), ing("Oil")], source: "Kent · 7 hearts" },
+  { name: "Pepper Poppers", ingredients: [ing("Hot Pepper"), ing("Cheese")], source: "Shane · 3 hearts" },
+  { name: "Bread", ingredients: [ing("Wheat Flour")], source: "Queen of Sauce · Summer 28 Y1" },
+  { name: "Tom Kha Soup", ingredients: [ing("Coconut"), ing("Shrimp"), ing("Common Mushroom")], source: "Sandy · 7 hearts" },
+  { name: "Trout Soup", ingredients: [ing("Rainbow Trout"), ing("Green Algae")], source: "Queen of Sauce · Fall 7 Y1" },
+  { name: "Chocolate Cake", ingredients: [ing("Wheat Flour"), ing("Sugar"), ing("Egg")], source: "Queen of Sauce · Winter 14 Y1" },
+  { name: "Pink Cake", ingredients: [ing("Melon"), ing("Wheat Flour"), ing("Sugar"), ing("Egg")], source: "Queen of Sauce · Summer 21 Y2" },
+  { name: "Rhubarb Pie", ingredients: [ing("Rhubarb"), ing("Wheat Flour"), ing("Sugar")], source: "Marnie · mail (after buying recipe)" },
+  { name: "Cookie", ingredients: [ing("Wheat Flour"), ing("Sugar"), ing("Egg")], source: "Evelyn · 4 hearts" },
+  { name: "Spaghetti", ingredients: [ing("Wheat Flour"), ing("Tomato")], source: "Lewis · 3 hearts" },
+  { name: "Fried Eel", ingredients: [ing("Eel"), ing("Oil")], source: "George · 3 hearts" },
+  { name: "Spicy Eel", ingredients: [ing("Eel"), ing("Hot Pepper")], source: "George · 7 hearts" },
+  { name: "Sashimi", ingredients: [ing("Any Fish")], source: "Linus · 3 hearts" },
+  { name: "Maki Roll", ingredients: [ing("Any Fish"), ing("Seaweed"), ing("Rice")], source: "Queen of Sauce · Summer 21 Y1" },
+  { name: "Tortilla", ingredients: [ing("Corn")], source: "Queen of Sauce · Fall 7 Y2" },
+  { name: "Red Plate", ingredients: [ing("Red Cabbage"), ing("Radish")], source: "Emily · 7 hearts" },
+  { name: "Eggplant Parmesan", ingredients: [ing("Eggplant"), ing("Tomato")], source: "Lewis · 7 hearts" },
+  { name: "Rice Pudding", ingredients: [ing("Milk"), ing("Sugar"), ing("Rice")], source: "Evelyn · 7 hearts" },
+  { name: "Ice Cream", ingredients: [ing("Milk"), ing("Sugar")], source: "Jodi · 7 hearts" },
+  { name: "Blueberry Tart", ingredients: [ing("Blueberry"), ing("Wheat Flour"), ing("Sugar"), ing("Egg")], source: "Pierre · 3 hearts" },
+  { name: "Autumn's Bounty", ingredients: [ing("Yam"), ing("Pumpkin")], source: "Demetrius · 7 hearts" },
+  { name: "Pumpkin Soup", ingredients: [ing("Pumpkin"), ing("Milk")], source: "Robin · 7 hearts" },
+  { name: "Super Meal", ingredients: [ing("Bok Choy"), ing("Cranberries"), ing("Artichoke")], source: "Kent · 3 hearts" },
+  { name: "Cranberry Sauce", ingredients: [ing("Cranberries"), ing("Sugar")], source: "Queen of Sauce · Winter 28 Y1" },
+  { name: "Stuffing", ingredients: [ing("Bread"), ing("Cranberries"), ing("Hazelnut")], source: "Pam · 7 hearts" },
+  { name: "Farmer's Lunch", ingredients: [ing("Omelet"), ing("Parsnip")], source: "Queen of Sauce · Fall 7 Y2" },
+  { name: "Survival Burger", ingredients: [ing("Bread"), ing("Cave Carrot"), ing("Eggplant")], source: "Queen of Sauce · Fall 21 Y1" },
+  { name: "Dish O' The Sea", ingredients: [ing("Sardine", 2), ing("Hashbrowns")], source: "Fishing level 3" },
+  { name: "Miner's Treat", ingredients: [ing("Cave Carrot", 2), ing("Sugar"), ing("Milk")], source: "Mining level 3" },
+  { name: "Roots Platter", ingredients: [ing("Cave Carrot"), ing("Winter Root")], source: "Combat level 3" },
+  { name: "Pumpkin Pie", ingredients: [ing("Pumpkin"), ing("Wheat Flour"), ing("Sugar"), ing("Milk")], source: "Queen of Sauce · Winter 21 Y1" },
+  { name: "Cranberry Candy", ingredients: [ing("Cranberries"), ing("Apple"), ing("Sugar")], source: "Queen of Sauce · Winter 28 Y2" },
+  { name: "Bruschetta", ingredients: [ing("Bread"), ing("Oil"), ing("Tomato")], source: "Queen of Sauce · Winter 21 Y2" },
+  { name: "Fiddlehead Risotto", ingredients: [ing("Oil"), ing("Fiddlehead Fern"), ing("Garlic")], source: "Queen of Sauce · Summer 28 Y2" },
+  { name: "Poppyseed Muffin", ingredients: [ing("Poppy"), ing("Wheat Flour"), ing("Sugar")], source: "Queen of Sauce · Winter 7 Y2" },
+  { name: "Chowder", ingredients: [ing("Clam"), ing("Milk")], source: "Willy · 3 hearts" },
+  { name: "Fish Stew", ingredients: [ing("Crayfish"), ing("Mussel"), ing("Periwinkle"), ing("Tomato")], source: "Willy · 7 hearts" },
+  { name: "Escargot", ingredients: [ing("Snail"), ing("Garlic")], source: "Willy · 5 hearts" },
+  { name: "Lobster Bisque", ingredients: [ing("Lobster"), ing("Milk")], source: "Willy · 9 hearts" },
+  { name: "Maple Bar", ingredients: [ing("Maple Syrup"), ing("Sugar"), ing("Wheat Flour")], source: "Queen of Sauce · Summer 14 Y2" },
+  { name: "Crab Cakes", ingredients: [ing("Crab"), ing("Wheat Flour"), ing("Egg"), ing("Oil")], source: "Queen of Sauce · Fall 21 Y2" },
+  { name: "Shrimp Cocktail", ingredients: [ing("Shrimp"), ing("Tomato"), ing("Wild Horseradish")], source: "Queen of Sauce · Winter 28 Y2" },
+  { name: "Seafoam Pudding", ingredients: [ing("Flounder"), ing("Midnight Squid"), ing("Squid Ink")], source: "Fishing level 9" },
+  { name: "Squid Ink Ravioli", ingredients: [ing("Squid Ink"), ing("Wheat Flour"), ing("Tomato")], source: "Combat level 9" },
+  { name: "Ginger Ale", ingredients: [ing("Ginger", 3), ing("Sugar")], source: "Volcano Dungeon · Ginger Island" },
+  { name: "Banana Pudding", ingredients: [ing("Banana"), ing("Milk"), ing("Sugar")], source: "Island Trader · Ginger Island" },
+  { name: "Mango Sticky Rice", ingredients: [ing("Mango"), ing("Rice"), ing("Coconut")], source: "Island · Ginger Island" },
+  { name: "Poi", ingredients: [ing("Taro Root", 4)], source: "Island · Ginger Island" },
+  { name: "Tropical Curry", ingredients: [ing("Coconut"), ing("Pineapple"), ing("Hot Pepper")], source: "Island Resort · Ginger Island" },
+];
