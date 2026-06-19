@@ -38,6 +38,17 @@ export type Track = {
   items: TrackItem[];
 };
 
+/** A planned building on the board — how many to build and how many are done. */
+export type BuildPlan = {
+  id: string;
+  /** Matches a Building.name in data.ts; cost & materials are pulled from there. */
+  building: string;
+  /** How many of this building the players want to build. */
+  count: number;
+  /** How many have actually been built so far. */
+  built: number;
+};
+
 export type FarmState = {
   /** Monotonic revision used for last-write-wins sync. */
   rev: number;
@@ -54,6 +65,8 @@ export type FarmState = {
   customItems: CustomItem[];
   /** Shared goal board — romances, builds, and custom missions. */
   tracks: Track[];
+  /** Buildings the players plan to build, with target count and cost tracking. */
+  buildPlans: BuildPlan[];
   /** Cooking recipes the players have learned, keyed by recipe name. */
   recipesUnlocked: Record<string, boolean>;
   /** Unlocked recipes picked for the "save these ingredients" plan, by name. */
@@ -85,6 +98,7 @@ export function defaultFarmState(): FarmState {
     starred: {},
     customItems: [],
     tracks: [],
+    buildPlans: [],
     recipesUnlocked: {},
     recipesPicked: {},
   };
@@ -105,6 +119,7 @@ function normalize(input: Partial<FarmState> | null | undefined): FarmState {
     starred: input.starred ?? {},
     customItems: Array.isArray(input.customItems) ? input.customItems : [],
     tracks: Array.isArray(input.tracks) ? input.tracks : [],
+    buildPlans: Array.isArray(input.buildPlans) ? input.buildPlans : [],
     recipesUnlocked: input.recipesUnlocked ?? {},
     recipesPicked: input.recipesPicked ?? {},
   };

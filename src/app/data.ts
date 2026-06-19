@@ -728,3 +728,232 @@ export const recipes: Recipe[] = [
   { name: "Poi", ingredients: [ing("Taro Root", 4)], source: "Island · Ginger Island" },
   { name: "Tropical Curry", ingredients: [ing("Coconut"), ing("Pineapple"), ing("Hot Pepper")], source: "Island Resort · Ginger Island" },
 ];
+
+/* ============================ Character schedules ============================ */
+
+export type Weekday = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+
+/** One stop in a character's day. `t` is minutes since midnight (e.g. 9:00 → 540). */
+export type ScheduleStop = { t: number; place: string };
+
+export type CharacterSchedule = {
+  name: string;
+  home: string;
+  /** The everyday routine. Specific weekdays in `byDay` override it. */
+  base: ScheduleStop[];
+  /** Notable day-specific routes (Saloon nights, work shifts, tutoring…). */
+  byDay?: Partial<Record<Weekday, ScheduleStop[]>>;
+  /** Caveat shown under the name (year-gating, static NPCs, weather notes…). */
+  note?: string;
+};
+
+const stop = (h: number, m: number, place: string): ScheduleStop => ({ t: h * 60 + m, place });
+
+// Approximate sunny-weekday routines. Real schedules also shift with weather,
+// season, hearts, festivals, and marriage — treat these as a "usually here" guide.
+export const characterSchedules: CharacterSchedule[] = [
+  {
+    name: "Abigail",
+    home: "Above Pierre's General Store",
+    base: [stop(9, 0, "Her room above Pierre's shop"), stop(11, 0, "Pierre's General Store"), stop(13, 30, "Town square / graveyard"), stop(16, 0, "Home, playing flute"), stop(20, 0, "Home")],
+    byDay: { Friday: [stop(9, 0, "Her room above Pierre's shop"), stop(12, 0, "Town square"), stop(18, 0, "Stardrop Saloon (with Sam & Sebastian)"), stop(24, 0, "Home")] },
+  },
+  {
+    name: "Alex",
+    home: "Grandparents' house, River Road",
+    base: [stop(9, 0, "Home on River Road"), stop(11, 0, "Town square (gridball & jogging)"), stop(14, 0, "Around town"), stop(16, 0, "The beach (sunny days)"), stop(19, 0, "Home")],
+  },
+  {
+    name: "Caroline",
+    home: "Above Pierre's General Store",
+    base: [stop(9, 0, "Home above the shop"), stop(10, 0, "The sunroom (tending plants)"), stop(14, 0, "Walk through town"), stop(16, 0, "Mountain road (jogging)"), stop(18, 0, "Home")],
+  },
+  {
+    name: "Clint",
+    home: "Back of the Blacksmith",
+    base: [stop(9, 0, "The Blacksmith (open 9–4)"), stop(16, 0, "Around town"), stop(18, 0, "Stardrop Saloon"), stop(22, 0, "Home, back of the shop")],
+  },
+  {
+    name: "Demetrius",
+    home: "Carpenter's house, the mountain",
+    base: [stop(9, 0, "His lab at the Carpenter's"), stop(13, 0, "Mountain & forest (research)"), stop(18, 0, "Home")],
+  },
+  {
+    name: "Dwarf",
+    home: "The Mines",
+    base: [stop(0, 0, "Dwarf shop, Mines entrance — all day")],
+    note: "Static — found at the Mines once you can understand the Dwarvish language.",
+  },
+  {
+    name: "Elliott",
+    home: "Cabin on the beach",
+    base: [stop(9, 0, "His cabin on the beach"), stop(12, 0, "Beach walk"), stop(15, 0, "The library (writing)"), stop(19, 0, "Stardrop Saloon"), stop(22, 0, "Cabin")],
+  },
+  {
+    name: "Emily",
+    home: "2 Willow Lane",
+    base: [stop(9, 0, "Home at 2 Willow Lane"), stop(12, 0, "Around town"), stop(16, 0, "Stardrop Saloon (bartending)"), stop(24, 0, "Home")],
+  },
+  {
+    name: "Evelyn",
+    home: "River Road (with George)",
+    base: [stop(9, 0, "Home, tending her garden"), stop(12, 0, "Town square"), stop(14, 0, "Pierre's General Store"), stop(16, 0, "Home, baking")],
+  },
+  {
+    name: "George",
+    home: "River Road (with Evelyn)",
+    base: [stop(9, 0, "Home porch on River Road"), stop(14, 0, "Town square"), stop(16, 0, "Home")],
+    byDay: { Sunday: [stop(9, 0, "Home"), stop(11, 0, "By the town square")] },
+  },
+  {
+    name: "Gus",
+    home: "Above the Stardrop Saloon",
+    base: [stop(9, 0, "Pierre's (buying supplies)"), stop(12, 0, "Stardrop Saloon (running the bar)"), stop(24, 0, "Home, above the Saloon")],
+  },
+  {
+    name: "Haley",
+    home: "2 Willow Lane",
+    base: [stop(9, 0, "Home at 2 Willow Lane"), stop(11, 0, "Around town (photographing)"), stop(14, 0, "The beach (sunny days)"), stop(18, 0, "Home")],
+  },
+  {
+    name: "Harvey",
+    home: "Above the Medical Clinic",
+    base: [stop(9, 0, "The Medical Clinic"), stop(15, 0, "Walk through town"), stop(19, 0, "Stardrop Saloon"), stop(22, 0, "Apartment above the clinic")],
+  },
+  {
+    name: "Jas",
+    home: "Marnie's Ranch",
+    base: [stop(9, 0, "Marnie's Ranch"), stop(13, 0, "Playing with Vincent"), stop(16, 0, "Marnie's Ranch")],
+    byDay: {
+      Tuesday: [stop(9, 0, "Marnie's Ranch"), stop(10, 0, "By the river (tutored by Penny)"), stop(15, 0, "Marnie's Ranch")],
+      Wednesday: [stop(9, 0, "Marnie's Ranch"), stop(10, 0, "By the museum (tutored by Penny)"), stop(15, 0, "Marnie's Ranch")],
+    },
+  },
+  {
+    name: "Jodi",
+    home: "1 Willow Lane",
+    base: [stop(9, 0, "Home, cooking & cleaning"), stop(13, 0, "Pierre's General Store"), stop(16, 0, "Home")],
+  },
+  {
+    name: "Kent",
+    home: "1 Willow Lane",
+    base: [stop(9, 0, "Home at 1 Willow Lane"), stop(13, 0, "Around town"), stop(16, 0, "Home")],
+    note: "Returns from the war in Spring of Year 2 — not around before then.",
+  },
+  {
+    name: "Krobus",
+    home: "The Sewers",
+    base: [stop(0, 0, "Krobus shop, the Sewers — all day")],
+    note: "Static — in the Sewers (access via the rusty key).",
+  },
+  {
+    name: "Leah",
+    home: "Cottage in the forest",
+    base: [stop(9, 0, "Her cottage (sculpting)"), stop(11, 0, "Foraging in the forest"), stop(14, 0, "Around town"), stop(16, 0, "Cottage")],
+    byDay: {
+      Friday: [stop(9, 0, "Her cottage"), stop(16, 0, "Stardrop Saloon"), stop(23, 0, "Cottage")],
+      Saturday: [stop(9, 0, "Her cottage"), stop(16, 0, "Stardrop Saloon"), stop(23, 0, "Cottage")],
+    },
+  },
+  {
+    name: "Leo",
+    home: "Ginger Island",
+    base: [stop(0, 0, "Ginger Island (his treehouse)")],
+    note: "Lives on Ginger Island; moves to a treehouse near the mountain once you befriend him.",
+  },
+  {
+    name: "Lewis",
+    home: "Mayor's Manor",
+    base: [stop(9, 0, "Walking through town (mayor rounds)"), stop(13, 0, "Town square"), stop(17, 0, "Stardrop Saloon"), stop(21, 0, "Mayor's Manor")],
+  },
+  {
+    name: "Linus",
+    home: "Tent by the mountain",
+    base: [stop(9, 0, "His tent by the mountain lake"), stop(12, 0, "Foraging around the mountain"), stop(16, 0, "The beach / town edges"), stop(20, 0, "Tent")],
+  },
+  {
+    name: "Marnie",
+    home: "Marnie's Ranch",
+    base: [stop(9, 0, "Marnie's Ranch (shop, open 9–4)"), stop(16, 0, "Around the ranch"), stop(19, 0, "Home")],
+    note: "Shop is often closed Monday & Tuesday — she's out (sometimes with Lewis).",
+  },
+  {
+    name: "Maru",
+    home: "Carpenter's house, the mountain",
+    base: [stop(9, 0, "The Carpenter's house (tinkering)"), stop(15, 0, "Around the mountain"), stop(19, 0, "Home (stargazing at night)")],
+    byDay: {
+      Tuesday: [stop(9, 0, "The Medical Clinic (working with Harvey)"), stop(16, 0, "Home")],
+      Thursday: [stop(9, 0, "The Medical Clinic (working with Harvey)"), stop(16, 0, "Home")],
+    },
+  },
+  {
+    name: "Pam",
+    home: "The trailer",
+    base: [stop(9, 0, "The trailer (home)"), stop(12, 0, "The bus stop"), stop(16, 0, "Stardrop Saloon"), stop(24, 0, "Home")],
+  },
+  {
+    name: "Penny",
+    home: "The trailer (with Pam)",
+    base: [stop(9, 0, "The trailer"), stop(12, 0, "The library / town"), stop(16, 0, "Home")],
+    byDay: {
+      Tuesday: [stop(9, 0, "The trailer"), stop(10, 0, "By the river (tutoring Jas & Vincent)"), stop(14, 0, "The library"), stop(16, 0, "Home")],
+      Wednesday: [stop(9, 0, "The trailer"), stop(10, 0, "By the museum (tutoring Jas & Vincent)"), stop(14, 0, "The library"), stop(16, 0, "Home")],
+    },
+  },
+  {
+    name: "Pierre",
+    home: "Above the General Store",
+    base: [stop(9, 0, "Pierre's General Store (open till 5)"), stop(18, 0, "Home, above the shop")],
+    byDay: { Wednesday: [stop(9, 0, "Home (shop closed)"), stop(12, 0, "Town / mountain"), stop(18, 0, "Home")] },
+    note: "General Store is closed Wednesdays until you complete the Community Center pantry.",
+  },
+  {
+    name: "Robin",
+    home: "Carpenter's house, the mountain",
+    base: [stop(9, 0, "Carpenter's Shop (open 9–5)"), stop(17, 0, "Around the mountain"), stop(19, 0, "Home")],
+  },
+  {
+    name: "Sam",
+    home: "1 Willow Lane",
+    base: [stop(9, 0, "Home at 1 Willow Lane"), stop(11, 0, "Skateboarding around town"), stop(14, 0, "Around town"), stop(16, 0, "Home (band practice)")],
+    byDay: { Friday: [stop(9, 0, "Home"), stop(13, 0, "Around town"), stop(20, 0, "Stardrop Saloon (with Sebastian & Abigail)"), stop(24, 0, "Home")] },
+  },
+  {
+    name: "Sandy",
+    home: "Oasis, Calico Desert",
+    base: [stop(0, 0, "The Oasis shop, Calico Desert — all day")],
+    note: "Static — runs the Oasis in the desert (reachable once the bus is repaired).",
+  },
+  {
+    name: "Sebastian",
+    home: "Carpenter's basement",
+    base: [stop(9, 0, "His basement room (at the computer)"), stop(15, 0, "The mountain lake"), stop(18, 0, "Home")],
+    byDay: { Friday: [stop(9, 0, "His basement room"), stop(22, 0, "Stardrop Saloon (with Sam & Abigail)"), stop(24, 0, "Home")] },
+  },
+  {
+    name: "Shane",
+    home: "Marnie's Ranch",
+    base: [stop(9, 0, "JojaMart (working, till 5)"), stop(18, 0, "Stardrop Saloon (drinking)"), stop(22, 0, "Marnie's Ranch")],
+    note: "On days off he's usually behind the Saloon or at the ranch.",
+  },
+  {
+    name: "Vincent",
+    home: "1 Willow Lane",
+    base: [stop(9, 0, "Home at 1 Willow Lane"), stop(13, 0, "Playing with Jas"), stop(16, 0, "Home")],
+    byDay: {
+      Tuesday: [stop(9, 0, "Home"), stop(10, 0, "By the river (tutored by Penny)"), stop(15, 0, "Home")],
+      Wednesday: [stop(9, 0, "Home"), stop(10, 0, "By the museum (tutored by Penny)"), stop(15, 0, "Home")],
+    },
+  },
+  {
+    name: "Willy",
+    home: "Back of the Fish Shop",
+    base: [stop(9, 0, "The Fish Shop on the beach (open 9–5)"), stop(17, 0, "Out on the pier"), stop(20, 0, "Home, back of the shop")],
+  },
+  {
+    name: "Wizard",
+    home: "The Wizard's Tower",
+    base: [stop(0, 0, "The Wizard's Tower, Cindersap Forest — all day")],
+    note: "Static — mostly in his tower (and its basement).",
+  },
+];

@@ -7,6 +7,7 @@ import {
   bundleItems,
   bundleRewards,
   calendarData,
+  characterSchedules,
   clampDay,
   crops,
   isAvailableInSeason,
@@ -24,13 +25,17 @@ import {
   type BundleGroup,
   type BundleItem,
   type Building,
+  type CharacterSchedule,
   type MissionTemplate,
+  type ScheduleStop,
   type Season,
   type Villager,
+  type Weekday,
 } from "./data";
 import {
   progressFor,
   useFarm,
+  type BuildPlan,
   type FarmState,
   type Progress,
   type SyncStatus,
@@ -49,7 +54,9 @@ type Tab =
   | "crops"
   | "villagers"
   | "builds"
-  | "recipes";
+  | "recipes"
+  | "schedule"
+  | "layout";
 
 const TABS: [Tab, string, string][] = [
   ["today", "Today", "🌅"],
@@ -62,6 +69,8 @@ const TABS: [Tab, string, string][] = [
   ["villagers", "Villagers", "🎁"],
   ["builds", "Builds", "🔨"],
   ["recipes", "Recipes", "🍳"],
+  ["schedule", "Where", "📍"],
+  ["layout", "Layout", "🗺️"],
 ];
 
 let customIdSeq = 0;
@@ -195,6 +204,42 @@ export default function Home() {
       })),
   };
 
+  // ---- buildables planner ----------------------------------------------
+  const buildPlanActions: BuildPlanActions = {
+    addBuildPlan: (building) =>
+      mutate((s) => {
+        // Re-adding a building just bumps its target count.
+        if (s.buildPlans.some((p) => p.building === building)) {
+          return {
+            ...s,
+            buildPlans: s.buildPlans.map((p) =>
+              p.building === building ? { ...p, count: p.count + 1 } : p,
+            ),
+          };
+        }
+        return {
+          ...s,
+          buildPlans: [...s.buildPlans, { id: newId("bld"), building, count: 1, built: 0 }],
+        };
+      }),
+    removeBuildPlan: (id) =>
+      mutate((s) => ({ ...s, buildPlans: s.buildPlans.filter((p) => p.id !== id) })),
+    setBuildCount: (id, count) =>
+      mutate((s) => ({
+        ...s,
+        buildPlans: s.buildPlans.map((p) =>
+          p.id === id ? { ...p, count: Math.max(1, count), built: Math.min(p.built, Math.max(1, count)) } : p,
+        ),
+      })),
+    setBuildBuilt: (id, built) =>
+      mutate((s) => ({
+        ...s,
+        buildPlans: s.buildPlans.map((p) =>
+          p.id === id ? { ...p, built: Math.min(Math.max(0, built), p.count) } : p,
+        ),
+      })),
+  };
+
   const [search, setSearch] = useState("");
 
   // ---- derived ---------------------------------------------------------
@@ -284,7 +329,9 @@ export default function Home() {
                 toggleDaily={toggleDaily}
               />
             )}
-            {tab === "board" && <BoardView state={state} actions={trackActions} />}
+            {tab === "board" && (
+              <BoardView state={state} actions={trackActions} buildActions={buildPlanActions} />
+            )}
             {tab === "bundles" && <BundlesView state={state} toggle={toggle} toggleStar={toggleStar} />}
             {tab === "watchlist" && (
               <WatchlistView
@@ -309,6 +356,8 @@ export default function Home() {
                 togglePicked={toggleRecipePicked}
               />
             )}
+            {tab === "schedule" && <ScheduleView state={state} />}
+            {tab === "layout" && <LayoutView />}
           </>
         )}
       </main>
@@ -1194,6 +1243,13 @@ type TrackActions = {
   removeTrackItem: (trackId: string, itemId: string) => void;
 };
 
+type BuildPlanActions = {
+  addBuildPlan: (building: string) => void;
+  removeBuildPlan: (id: string) => void;
+  setBuildCount: (id: string, count: number) => void;
+  setBuildBuilt: (id: string, built: number) => void;
+};
+
 const TRACK_GROUPS: TrackOwner[] = ["p1", "both", "p2"];
 
 // Seed a romance track from the gift cadence + heart milestones.
@@ -1254,7 +1310,15 @@ function ownerAvatar(o: TrackOwner, label: string) {
   );
 }
 
-function BoardView({ state, actions }: { state: FarmState; actions: TrackActions }) {
+function BoardView({
+  state,
+  actions,
+  buildActions,
+}: {
+  state: FarmState;
+  actions: TrackActions;
+  buildActions: BuildPlanActions;
+}) {
   const tracks = state.tracks;
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleCollapse = (id: string) => setCollapsed((c) => ({ ...c, [id]: !c[id] }));
@@ -1269,6 +1333,8 @@ function BoardView({ state, actions }: { state: FarmState; actions: TrackActions
   return (
     <div className="board">
       <TrackComposer state={state} addTrack={actions.addTrack} />
+      <BuildablesPanel plans={state.buildPlans} actions={buildActions} />
+      <RecipePlanPanel state={state} />
       <GiftCheatSheet />
 
       <div className="board-columns">
@@ -1328,6 +1394,197 @@ function GiftCheatSheet() {
           <p>
             <span className="ug hated">Avoid</span> {universalGifts.hated}
           </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BuildablesPanel({ plans, actions }: { plans: BuildPlan[]; actions: BuildPlanActions }) {
+  const [pick, setPick] = useState(buildings[0].name);
+  const [open, setOpen] = useState(true);
+
+  const goldFor = (name: string) => buildings.find((b) => b.name === name)?.gold ?? 0;
+
+  const totalGold = plans.reduce((sum, p) => sum + goldFor(p.building) * p.count, 0);
+  const remainingGold = plans.reduce((sum, p) => sum + goldFor(p.building) * (p.count - p.built), 0);
+  const totalToBuild = plans.reduce((sum, p) => sum + p.count, 0);
+  const totalBuilt = plans.reduce((sum, p) => sum + p.built, 0);
+
+  return (
+    <div className="buildables">
+      <button
+        type="button"
+        className="buildables-head"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span className="track-caret" aria-hidden="true">
+          {open ? "▾" : "▸"}
+        </span>
+        🔨 Buildables — plan how many to build &amp; what it costs
+        {plans.length > 0 && (
+          <span className="buildables-tally">
+            {totalBuilt}/{totalToBuild} built · {totalGold.toLocaleString()}g
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="buildables-body">
+          <div className="buildables-add">
+            <select value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Building to plan">
+              {buildings.map((b) => (
+                <option key={b.name} value={b.name}>
+                  {b.name} · {b.gold.toLocaleString()}g
+                </option>
+              ))}
+            </select>
+            <button type="button" className="composer-add" onClick={() => actions.addBuildPlan(pick)}>
+              ＋ Add
+            </button>
+          </div>
+
+          {plans.length === 0 ? (
+            <p className="buildables-empty">
+              Nothing planned yet — pick a building above to start a cost plan.
+            </p>
+          ) : (
+            <>
+              <ul className="buildable-list">
+                {plans.map((p) => {
+                  const gold = goldFor(p.building);
+                  const done = p.built >= p.count;
+                  return (
+                    <li key={p.id} className={done ? "buildable done" : "buildable"}>
+                      <div className="buildable-main">
+                        <strong>{p.building}</strong>
+                        <small>
+                          {gold.toLocaleString()}g each · {(gold * p.count).toLocaleString()}g total
+                        </small>
+                      </div>
+                      <div className="buildable-controls">
+                        <div className="qty" role="group" aria-label={`How many ${p.building} to build`}>
+                          <button
+                            type="button"
+                            onClick={() => actions.setBuildCount(p.id, p.count - 1)}
+                            aria-label="Build one fewer"
+                          >
+                            −
+                          </button>
+                          <span className="qty-num">{p.count}×</span>
+                          <button
+                            type="button"
+                            onClick={() => actions.setBuildCount(p.id, p.count + 1)}
+                            aria-label="Build one more"
+                          >
+                            ＋
+                          </button>
+                        </div>
+                        <div className="built" role="group" aria-label={`How many ${p.building} built`}>
+                          <button
+                            type="button"
+                            onClick={() => actions.setBuildBuilt(p.id, p.built - 1)}
+                            aria-label="Mark one un-built"
+                          >
+                            −
+                          </button>
+                          <span className="built-num">{p.built}/{p.count} built</span>
+                          <button
+                            type="button"
+                            onClick={() => actions.setBuildBuilt(p.id, p.built + 1)}
+                            aria-label="Mark one built"
+                          >
+                            ＋
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="buildable-remove"
+                          onClick={() => actions.removeBuildPlan(p.id)}
+                          aria-label={`Remove ${p.building}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="buildables-foot">
+                <span>🔨 {totalBuilt}/{totalToBuild} built</span>
+                <span>
+                  💰 {totalGold.toLocaleString()}g total · {remainingGold.toLocaleString()}g to go
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Read-only reflection of the Recipes tab plan: picked recipes + the ingredients
+// to save for them. Managed on the Recipes tab; mirrored here for the co-op board.
+function RecipePlanPanel({ state }: { state: FarmState }) {
+  const [open, setOpen] = useState(true);
+
+  const picked = recipes.filter((r) => state.recipesUnlocked[r.name] && state.recipesPicked[r.name]);
+  const shopping = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const r of picked) {
+      for (const { item, qty } of r.ingredients) {
+        totals.set(item, (totals.get(item) ?? 0) + qty);
+      }
+    }
+    return [...totals.entries()]
+      .map(([item, qty]) => ({ item, qty }))
+      .sort((a, b) => a.item.localeCompare(b.item));
+  }, [picked]);
+
+  return (
+    <div className="buildables recipe-plan">
+      <button
+        type="button"
+        className="buildables-head"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span className="track-caret" aria-hidden="true">
+          {open ? "▾" : "▸"}
+        </span>
+        🍳 Recipe plan — ingredients to save
+        {picked.length > 0 && (
+          <span className="buildables-tally">
+            {picked.length} recipe{picked.length === 1 ? "" : "s"} · {shopping.length} to save
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="buildables-body">
+          {picked.length === 0 ? (
+            <p className="buildables-empty">
+              Nothing picked yet — choose recipes on the Recipes tab to plan ingredients to save.
+            </p>
+          ) : (
+            <>
+              <div className="recipe-plan-makes">
+                {picked.map((r) => (
+                  <span key={r.name} className="recipe-chip">
+                    {r.name}
+                  </span>
+                ))}
+              </div>
+              <ul className="shopping-list">
+                {shopping.map(({ item, qty }) => (
+                  <li key={item} className="shopping-row">
+                    <span className="shopping-item">🧺 {item}</span>
+                    <span className="shopping-qty">×{qty}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -1788,6 +2045,141 @@ function RecipesView({
             </ul>
           )}
         </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ============================ Layout (farm plan) ============================ */
+
+// The farm layout we're building toward — a reference image saved at
+// public/farm-layout.png. Shows a friendly hint until the file is added.
+function LayoutView() {
+  const [missing, setMissing] = useState(false);
+
+  return (
+    <div className="layout-view">
+      <Card
+        title="🗺️ Our farm plan"
+        subtitle="The layout we're building toward"
+        accent="#5aa85f"
+      >
+        {missing ? (
+          <p className="empty">
+            Add your farm screenshot at <code>public/farm-layout.png</code> to show it here.
+          </p>
+        ) : (
+          <img
+            className="layout-image"
+            src="/farm-layout.png"
+            alt="Our planned farm layout"
+            onError={() => setMissing(true)}
+          />
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ============================ Where (schedules) ============================ */
+
+// Minutes since midnight → "9:00 am". Stardew runs past midnight (e.g. 25:00 → 1:00 am).
+function fmtTime(mins: number): string {
+  const m = ((mins % 1440) + 1440) % 1440;
+  let h = Math.floor(m / 60);
+  const mm = (m % 60).toString().padStart(2, "0");
+  const ap = h < 12 ? "am" : "pm";
+  h = h % 12 || 12;
+  return `${h}:${mm} ${ap}`;
+}
+
+function scheduleFor(c: CharacterSchedule, weekday: Weekday): ScheduleStop[] {
+  return c.byDay?.[weekday] ?? c.base;
+}
+
+function ScheduleView({ state }: { state: FarmState }) {
+  const [q, setQ] = useState("");
+  // The in-game clock starts at 6am; noon is a sensible default for "where now".
+  const [time, setTime] = useState(12 * 60);
+  const weekday = weekdayFor(state.day) as Weekday;
+  const query = q.trim().toLowerCase();
+
+  const list = characterSchedules.filter(
+    (c) =>
+      !query ||
+      c.name.toLowerCase().includes(query) ||
+      c.home.toLowerCase().includes(query) ||
+      scheduleFor(c, weekday).some((s) => s.place.toLowerCase().includes(query)),
+  );
+
+  return (
+    <div className="schedule-view">
+      <div className="schedule-controls">
+        <label className="search">
+          <span aria-hidden="true">🔍</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search a villager or a place — Abigail, Saloon, beach…"
+          />
+        </label>
+        <div className="time-control">
+          <div className="time-head">
+            <span className="time-day">
+              {weekday} · {seasonEmoji[state.season]} {state.season} {state.day}
+            </span>
+            <span className="time-now">🕐 {fmtTime(time)}</span>
+          </div>
+          <input
+            type="range"
+            min={360}
+            max={1560}
+            step={30}
+            value={time}
+            onChange={(e) => setTime(Number(e.target.value))}
+            aria-label="Time of day"
+          />
+        </div>
+      </div>
+
+      <p className="schedule-caveat">
+        Approximate sunny-day routines — real paths also shift with weather, season, hearts, and festivals.
+      </p>
+
+      {list.length === 0 && <p className="empty">Nobody matches that.</p>}
+
+      <div className="schedule-grid">
+        {list.map((c) => {
+          const stops = scheduleFor(c, weekday);
+          // Where they are at the chosen time = the last stop already begun.
+          let activeIdx = -1;
+          for (let i = 0; i < stops.length; i += 1) {
+            if (stops[i].t <= time) activeIdx = i;
+          }
+          const nowPlace = activeIdx >= 0 ? stops[activeIdx].place : null;
+          const allDay = stops.length === 1 && stops[0].t === 0;
+          return (
+            <section key={c.name} className="sched-card">
+              <header className="sched-head">
+                <strong>{c.name}</strong>
+                <span className="sched-now">
+                  {allDay ? `📍 ${stops[0].place}` : nowPlace ? `📍 ${nowPlace}` : "😴 Asleep at home"}
+                </span>
+              </header>
+              {c.note && <p className="sched-note">{c.note}</p>}
+              {!allDay && (
+                <ol className="sched-timeline">
+                  {stops.map((s, i) => (
+                    <li key={s.t} className={`sched-stop${i === activeIdx ? " active" : ""}`}>
+                      <span className="sched-time">{fmtTime(s.t)}</span>
+                      <span className="sched-place">{s.place}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          );
+        })}
       </div>
     </div>
   );

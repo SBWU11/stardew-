@@ -1343,6 +1343,176 @@ h2 {
   color: var(--ink-soft);
 }
 
+.buildables {
+  border: 2px solid var(--wood);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.buildables-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 14px;
+  text-align: left;
+  font-family: var(--font-pixel), sans-serif;
+  font-weight: 700;
+  color: var(--ink);
+}
+.buildables-tally {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.buildables-body {
+  padding: 0 14px 12px;
+  display: grid;
+  gap: 10px;
+}
+.buildables-add {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.buildables-add select {
+  flex: 1 1 220px;
+  height: 42px;
+  border: 2px solid var(--wood);
+  border-radius: 10px;
+  background: var(--paper-2);
+  padding: 0 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.buildables-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.buildable-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.buildable {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  border: 2px solid var(--wood);
+  border-radius: 10px;
+  background: var(--paper-2);
+  padding: 8px 10px;
+}
+.buildable.done {
+  border-color: var(--turned);
+  background: var(--theme-soft);
+}
+.buildable-main {
+  display: grid;
+  gap: 2px;
+}
+.buildable-main strong {
+  font-weight: 800;
+  color: var(--ink);
+}
+.buildable-main small {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+.buildable-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.buildable .qty,
+.buildable .built {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid var(--wood);
+  border-radius: 9px;
+  background: var(--paper);
+  padding: 3px 6px;
+}
+.buildable .qty button,
+.buildable .built button {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 2px solid var(--wood);
+  background: var(--paper-2);
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1;
+}
+.buildable .qty-num {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 900;
+  color: var(--ink);
+}
+.buildable .built-num {
+  min-width: 64px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.buildable-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid var(--wood);
+  background: var(--paper);
+  font-weight: 900;
+  color: var(--ink-soft);
+}
+.buildables-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 2px dashed var(--wood);
+  padding-top: 8px;
+  font-weight: 800;
+  font-size: 0.84rem;
+  color: var(--ink);
+}
+
+.recipe-plan-makes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.recipe-chip {
+  border: 2px solid var(--wood);
+  border-radius: 999px;
+  background: var(--paper-2);
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.layout-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 2px solid var(--wood);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
 .board-columns {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1864,6 +2034,118 @@ h2 {
 }
 @media (max-width: 820px) {
   .recipes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================ Where (schedules) ============================ */
+.schedule-view {
+  display: grid;
+  gap: 12px;
+}
+.schedule-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.time-control {
+  display: grid;
+  gap: 4px;
+}
+.time-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.time-day {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.time-now {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--theme);
+}
+.time-control input[type="range"] {
+  width: 100%;
+  accent-color: var(--theme);
+}
+.schedule-caveat {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.sched-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+  padding: 11px 13px;
+}
+.sched-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 7px;
+}
+.sched-head strong {
+  font-size: 1rem;
+  font-weight: 800;
+}
+.sched-now {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--theme);
+}
+.sched-note {
+  margin: 0 0 7px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+.sched-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.sched-stop {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  padding: 4px 7px;
+  border-radius: 7px;
+  font-size: 0.8rem;
+}
+.sched-stop.active {
+  background: var(--theme-soft);
+}
+.sched-time {
+  font-weight: 800;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.sched-stop.active .sched-time {
+  color: var(--theme);
+}
+.sched-place {
+  color: var(--ink);
+}
+.sched-stop.active .sched-place {
+  font-weight: 700;
+}
+@media (max-width: 700px) {
+  .schedule-controls {
     grid-template-columns: 1fr;
   }
 }
